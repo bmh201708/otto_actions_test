@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Digital Talisman - Oracle</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&amp;family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#fffbff",
+                    "surface-container": "#efefd7",
+                    "secondary-fixed-dim": "#c1c7cf",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-high": "#eaead1",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed": "#d3e6ed",
+                    "background": "#fbfbe2",
+                    "surface-variant": "#e4e4cc",
+                    "tertiary-fixed-dim": "#b7cad1",
+                    "primary-container": "#db313f",
+                    "surface-dim": "#dbdcc3",
+                    "secondary-container": "#dde3eb",
+                    "on-secondary-fixed-variant": "#41474e",
+                    "surface-tint": "#bb152c",
+                    "surface-container-highest": "#e4e4cc",
+                    "inverse-on-surface": "#f2f2d9",
+                    "on-tertiary-container": "#fafdff",
+                    "on-secondary-fixed": "#161c22",
+                    "primary-fixed-dim": "#ffb3b1",
+                    "on-secondary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "surface": "#fbfbe2",
+                    "on-primary-fixed-variant": "#92001c",
+                    "tertiary": "#4d5f65",
+                    "outline-variant": "#e4bebc",
+                    "on-tertiary-fixed-variant": "#384950",
+                    "on-primary-fixed": "#410007",
+                    "surface-container-low": "#f5f5dc",
+                    "inverse-surface": "#303221",
+                    "on-background": "#1b1d0e",
+                    "secondary-fixed": "#dde3eb",
+                    "tertiary-container": "#66777e",
+                    "on-surface": "#1b1d0e",
+                    "error": "#ba1a1a",
+                    "outline": "#8f6f6e",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "secondary": "#595f66",
+                    "on-surface-variant": "#5b403f",
+                    "primary-fixed": "#ffdad8",
+                    "on-tertiary-fixed": "#0c1e23",
+                    "inverse-primary": "#ffb3b1",
+                    "surface-bright": "#fbfbe2",
+                    "primary": "#b7102a",
+                    "on-secondary-container": "#5f656c"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Noto Serif", "serif"],
+                    "display": ["Noto Serif", "serif"],
+                    "body": ["Manrope", "sans-serif"],
+                    "label": ["Manrope", "sans-serif"]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body { background-color: #fbfbe2; color: #1b1d0e; }
+        .material-symbols-outlined { font-family: 'Material Symbols Outlined'; font-weight: normal; font-style: normal; font-size: 24px; line-height: 1; letter-spacing: normal; text-transform: none; display: inline-block; white-space: nowrap; word-wrap: normal; direction: ltr; -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased; }
+    </style>
+</head>
+<body class="font-body antialiased flex bg-surface text-on-surface h-screen overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<nav class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#fbfbe2] dark:bg-[#1b1d0e] shadow-[10px_0_30px_-15px_rgba(27,29,14,0.06)] hidden md:block">
+<div class="flex flex-col h-full py-8">
+<div class="px-6 mb-12 flex items-center gap-3">
+<img alt="Calligraphic Robot Seal" class="w-10 h-10 rounded-full object-cover shadow-sm" data-alt="close-up of a traditional Chinese red seal stamp with intricate ancient calligraphy characters on aged white rice paper" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrN_PK0Cw7Ds-6XzbhWTaahRuQtRyVZ9r08UxaiS9qmZm0KlxTnVox1lcFkzWG-rNIT3gKcxheUSiK62ck9WCmsQ_jv6boEMrS7i_tFSkf68PzLNuuhj_tCRoj76zxOS4iF07RUwJMbGmWmXg2ybTkDogYCcFLPUDZK9a2iNd7gZo_ESsN-4SuqQbf1EDsrS0ifAL4JxvzmnQbqOc1GrtU0x754h-dpcWvAYuze1LbBGf7_NILxR9-B4xDs2OYl5Ky5cP5Obmr7zhX"/>
+<div>
+<h1 class="text-2xl font-bold text-[#b7102a] dark:text-[#db313f] font-['Noto_Serif'] tracking-tight">The Digital Talisman</h1>
+<p class="text-xs text-[#1b1d0e]/60 dark:text-[#fbfbe2]/60 font-body uppercase tracking-wider mt-1">V0.4 Alchemy Edition</p>
+</div>
+</div>
+<div class="flex-1 space-y-2">
+<a class="flex items-center gap-4 text-[#1b1d0e]/60 dark:text-[#fbfbe2]/60 hover:text-[#b7102a] ml-4 pl-4 py-3 transition-all hover:translate-x-1 duration-300 font-['Noto_Serif'] antialiased tracking-tight" href="#">
+<span class="material-symbols-outlined" data-icon="settings_remote">settings_remote</span>
+<span class="text-lg">Control Center</span>
+</a>
+<a class="flex items-center gap-4 text-[#1b1d0e]/60 dark:text-[#fbfbe2]/60 hover:text-[#b7102a] ml-4 pl-4 py-3 transition-all hover:translate-x-1 duration-300 font-['Noto_Serif'] antialiased tracking-tight" href="#">
+<span class="material-symbols-outlined" data-icon="architecture">architecture</span>
+<span class="text-lg">Action Lab</span>
+</a>
+<a class="flex items-center gap-4 text-[#b7102a] dark:text-[#db313f] font-bold bg-[#f4f4d7] dark:bg-[#252814] rounded-l-full ml-4 pl-4 py-3 transition-all font-['Noto_Serif'] antialiased tracking-tight" href="#">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+<span class="text-lg">Oracle</span>
+</a>
+<a class="flex items-center gap-4 text-[#1b1d0e]/60 dark:text-[#fbfbe2]/60 hover:text-[#b7102a] ml-4 pl-4 py-3 transition-all hover:translate-x-1 duration-300 font-['Noto_Serif'] antialiased tracking-tight" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-lg">Settings</span>
+</a>
+</div>
+<div class="px-6 mt-auto">
+<button class="w-full py-3 bg-[#b7102a] text-white rounded-full font-body font-medium tracking-wide hover:opacity-90 transition-opacity shadow-[0_4px_14px_0_rgba(183,16,42,0.39)]">
+                    Calibrate Robot
+                </button>
+</div>
+</div>
+</nav>
+<!-- TopAppBar (Shared Component) -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] z-30 bg-[#fbfbe2]/90 dark:bg-[#1b1d0e]/90 backdrop-blur-xl hidden md:flex justify-between items-center px-12 h-20">
+<div class="font-['Noto_Serif'] text-xl font-black text-[#1b1d0e] dark:text-[#fbfbe2]">Otto Systems</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-[#b7102a] dark:text-[#db313f]">
+<button class="hover:opacity-80 transition-opacity p-2 rounded-full hover:bg-[#b7102a]/10"><span class="material-symbols-outlined" data-icon="battery_charging_full">battery_charging_full</span></button>
+<button class="hover:opacity-80 transition-opacity p-2 rounded-full hover:bg-[#b7102a]/10"><span class="material-symbols-outlined" data-icon="settings_input_antenna">settings_input_antenna</span></button>
+<button class="hover:opacity-80 transition-opacity p-2 rounded-full hover:bg-[#b7102a]/10"><span class="material-symbols-outlined" data-icon="account_circle">account_circle</span></button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-0 md:ml-64 pt-20 h-screen overflow-y-auto bg-surface relative">
+<!-- Subtle Background Texture overlay -->
+<div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(circle at center, #1b1d0e 1px, transparent 1px); background-size: 24px 24px;"></div>
+<div class="max-w-7xl mx-auto p-8 md:p-16 relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12">
+<!-- Left Column: Shake Interaction -->
+<div class="lg:col-span-5 flex flex-col items-center justify-center space-y-12">
+<div class="text-center space-y-4">
+<h2 class="font-display text-4xl md:text-5xl text-on-surface">Seek Guidance</h2>
+<p class="font-body text-on-surface-variant text-sm uppercase tracking-widest">Consult the Digital I Ching</p>
+</div>
+<!-- Interaction Container -->
+<div class="relative w-64 h-80 flex items-center justify-center bg-surface-container-low rounded-[2rem] shadow-[0_20px_40px_-15px_rgba(27,29,14,0.08)] border border-outline-variant/20 p-8 cursor-pointer group">
+<!-- Glow effect on hover -->
+<div class="absolute inset-0 rounded-[2rem] bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+<div class="flex flex-col items-center space-y-6">
+<img alt="Traditional Red Chime Container" class="w-32 h-32 object-contain filter drop-shadow-xl" data-alt="an elegant traditional Chinese red lacquer fortune stick cylinder filled with bamboo slips, resting on aged silk paper, soft studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcbBVh1h523XZFQTL7Cv08Rsz53Q6vgRQz27zsfvqgBTYgcJ8CqFwAmgyqpiO3DfXDyQSs2SLfrgwizcT155bh_YsuPE7NH9jbHpAl3WAsnTDQpKdwGxEjp9l_dTmBTchjctPgjBcqhdnc9QIBGkn7MMWyzN3NhggBkBp4xFR5dGNVjW7kg9UE0989ZaYK0ycggf_rKd6fw6BVsP8GFX9-QGmYU2Jj5S2OuI8f_GhgLZ1hA0N_m9LA4qD68AtXbnskE6y-m7j6wm3Z"/>
+<div class="flex flex-col items-center space-y-2">
+<span class="material-symbols-outlined text-primary text-3xl opacity-70" data-icon="vibration">vibration</span>
+<span class="font-display text-lg text-primary font-bold">Shake to Reveal</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60 font-body text-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="info">info</span>
+<span>Concentrate on your query before shaking</span>
+</div>
+</div>
+<!-- Right Column: Prophecy Result (Scroll Layout) -->
+<div class="lg:col-span-7 flex flex-col">
+<!-- Scroll Container -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-[0_30px_60px_-20px_rgba(27,29,14,0.12)] p-10 md:p-14 relative overflow-hidden h-full">
+<!-- Decorative Cloud Corners (SVG Mask placeholder) -->
+<div class="absolute top-0 right-0 w-32 h-32 opacity-5 pointer-events-none">
+<svg class="w-full h-full text-on-surface" fill="currentColor" viewbox="0 0 100 100">
+<path d="M100 0H0C0 55.2285 44.7715 100 100 100V0Z"></path>
+</svg>
+</div>
+<div class="space-y-10">
+<!-- Header Section -->
+<div class="border-b-2 border-primary/20 pb-8 relative">
+<div class="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center">
+<span class="font-display text-3xl text-primary font-bold opacity-80">吉</span>
+</div>
+<h3 class="font-body text-primary text-sm font-bold tracking-[0.2em] uppercase mb-2">Sign 38</h3>
+<h1 class="font-display text-5xl text-on-surface leading-tight">Great Fortune</h1>
+<p class="font-display text-xl text-on-surface-variant italic mt-4">"The dragon leaps from the deep abyss, ascending to the sky."</p>
+</div>
+<!-- Content Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Interpretation -->
+<div class="space-y-4">
+<h4 class="font-body text-xs text-on-surface-variant uppercase tracking-widest font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="visibility">visibility</span> Interpretation
+                                </h4>
+<p class="font-body text-on-surface leading-relaxed text-sm">
+                                    Your long period of preparation is coming to an end. The obstacles that previously hindered your progress are dissolving like morning mist. It is a time for bold movement and confident execution of long-held plans.
+                                </p>
+</div>
+<!-- Actions -->
+<div class="space-y-4">
+<h4 class="font-body text-xs text-on-surface-variant uppercase tracking-widest font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="directions_run">directions_run</span> Recommended Actions
+                                </h4>
+<ul class="space-y-3 font-body text-sm text-on-surface">
+<li class="flex items-start gap-3">
+<span class="w-1.5 h-1.5 rounded-full bg-primary mt-2"></span>
+<span><strong>Promotion:</strong> Actively seek advancement. The winds are favorable.</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="w-1.5 h-1.5 rounded-full bg-primary mt-2"></span>
+<span><strong>Renewal:</strong> Discard outdated methods and embrace new technologies.</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- Secondary Info (Ink Wash styling) -->
+<div class="bg-surface-container-low p-6 rounded-xl mt-8">
+<div class="flex items-center justify-between">
+<span class="font-body text-xs text-on-surface-variant uppercase tracking-widest">Elemental Affinity</span>
+<span class="font-display text-lg text-on-surface">Wood / Fire</span>
+</div>
+</div>
+<!-- Action Button -->
+<div class="pt-6 flex justify-end">
+<button class="flex items-center gap-2 px-8 py-4 bg-surface-container-highest text-on-surface font-body text-sm font-medium rounded-full hover:bg-surface-variant transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[20px]" data-icon="bookmark_add">bookmark_add</span>
+                                Save Prophecy
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

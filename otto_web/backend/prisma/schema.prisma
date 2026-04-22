@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OracleStatus {
+  pending
+  completed
+  failed
+}
+
+enum MessageRole {
+  user
+  assistant
+}
+
+model User {
+  id           String           @id @default(cuid())
+  email        String           @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  sequences    Sequence[]
+  readings     OracleReading[]
+  logs         RobotActionLog[]
+  conversations Conversation[]
+}
+
+model RobotStatus {
+  id              String   @id @default(cuid())
+  isOnline        Boolean  @default(true)
+  isBusy          Boolean  @default(false)
+  batteryPercent  Int      @default(84)
+  signalStrength  String   @default("Stable")
+  distanceCm      Float    @default(8.6)
+  currentAction   String?
+  lastTelemetryAt DateTime @default(now())
+  coreTempC       Int      @default(42)
+  memoryPercent   Int      @default(12)
+  firmwareVersion String   @default("V.4.2.8")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model RobotActionLog {
+  id            String   @id @default(cuid())
+  actionKey     String
+  params        Json?
+  statusSnapshot Json?
+  createdAt     DateTime @default(now())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model OracleReading {
+  id                 String       @id @default(cuid())
+  prompt             String
+  signNumber         Int
+  title              String
+  quote              String
+  interpretation     String       @db.Text
+  recommendedActions Json
+  elementalAffinity  String
+  status             OracleStatus @default(pending)
+  error              String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  userId             String?
+  user               User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Sequence {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  userId      String?
+  user        User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  steps       SequenceStep[]
+}
+
+model SequenceStep {
+  id        String   @id @default(cuid())
+  label     String
+  actionKey String
+  offsetMs  Int
+  params    Json?
+  sortOrder Int
+  sequenceId String
+  sequence  Sequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  title     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages  Message[]
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  role           MessageRole
+  content        String      @db.Text
+  model          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
