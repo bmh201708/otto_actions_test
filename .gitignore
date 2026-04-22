@@ -1,0 +1,57 @@
+.DS_Store
+**/.DS_Store
+
+# Editors
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+otto_web/backend/.env
+otto_web/frontend/.env.local
+
+# Node / frontend
+node_modules/
+.npm/
+.pnpm-store/
+.turbo/
+coverage/
+dist/
+build/
+*.tsbuildinfo
+otto_web/.npm-cache/
+otto_web/frontend/.next/
+otto_web/frontend/out/
+otto_web/frontend/node_modules/
+otto_web/backend/node_modules/
+otto_web/backend/dist/
+otto_web/backend/.turbo/
+
+# Docker / local data
+*.pid
+*.seed
+tmp/
+temp/
+
+# Arduino / embedded build artifacts
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+*.o
+*.a
+*.d
+*.bak
+*.swp
