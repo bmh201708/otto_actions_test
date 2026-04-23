@@ -1,10 +1,8 @@
 import { Router } from "express";
 
-import { prisma } from "../lib/prisma";
-import { MockOttoDeviceService } from "../services/mock-otto-device.service";
+import { ottoDevice as device } from "../services/otto-device";
 
 export const robotRouter = Router();
-const device = new MockOttoDeviceService(prisma);
 
 robotRouter.get("/status", async (_request, response) => {
   const status = await device.getStatus();

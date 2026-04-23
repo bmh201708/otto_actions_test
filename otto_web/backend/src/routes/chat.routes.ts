@@ -1,8 +1,16 @@
 import { Router } from "express";
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import type { Response } from "express";
+import type { ChatCompletionMessageParam, ChatCompletionMessageToolCall } from "openai/resources/chat/completions";
 
 import { prisma } from "../lib/prisma";
-import { createChatStream } from "../services/openai.service";
+import { createChatStream, createToolPlanningCompletion } from "../services/openai.service";
+import {
+  buildFinalResponseMessages,
+  buildToolPlanningMessages,
+  executeToolCalls,
+  ottoTools,
+  toAssistantToolCallMessage
+} from "../services/otto-tools.service";
 import { openSse, sendSse } from "../services/sse";
 
 export const chatRouter = Router();
@@ -87,21 +95,17 @@ chatRouter.get("/stream/:conversationId", async (request, response) => {
   openSse(response);
 
   try {
-    const messages: ChatCompletionMessageParam[] = [
-      {
-        role: "system",
-        content:
-          "You are Otto's oracle-grade operator copilot. Give concise, grounded guidance that can help drive robot actions and exhibition interactions."
-      },
-      ...conversation.messages
-        .filter((message) => !(message.id === assistantMessageId && message.role === "assistant"))
-        .map((message) => ({
-          role: message.role,
-          content: message.content
-        }))
-    ];
+    const baseMessages: ChatCompletionMessageParam[] = conversation.messages
+      .filter((message) => !(message.id === assistantMessageId && message.role === "assistant"))
+      .map((message) => ({
+        role: message.role,
+        content: message.content
+      }));
 
-    const stream = await createChatStream(messages);
+    const plannedMessages = await runToolCallingLoop(baseMessages, response);
+    const finalMessages = buildFinalResponseMessages(plannedMessages);
+
+    const stream = await createChatStream(finalMessages);
     let assistantContent = "";
 
     for await (const chunk of stream) {
@@ -132,3 +136,38 @@ chatRouter.get("/stream/:conversationId", async (request, response) => {
     return response.end();
   }
 });
+
+async function runToolCallingLoop(messages: ChatCompletionMessageParam[], response: Response) {
+  const loopMessages = [...messages];
+
+  for (let iteration = 0; iteration < 3; iteration += 1) {
+    const completion = await createToolPlanningCompletion(buildToolPlanningMessages(loopMessages), ottoTools);
+    const assistantMessage = completion.choices[0]?.message;
+    const toolCalls = assistantMessage?.tool_calls as ChatCompletionMessageToolCall[] | undefined;
+
+    if (!toolCalls?.length) {
+      return loopMessages;
+    }
+
+    loopMessages.push(toAssistantToolCallMessage(toolCalls));
+    const { events, toolMessages } = await executeToolCalls(toolCalls);
+
+    for (const event of events) {
+      if (event.type === "tool_call") {
+        sendSse(response, "chat.tool_call", {
+          name: event.name,
+          arguments: event.arguments
+        });
+      } else {
+        sendSse(response, "chat.tool_result", {
+          name: event.name,
+          result: event.result
+        });
+      }
+    }
+
+    loopMessages.push(...toolMessages);
+  }
+
+  return loopMessages;
+}

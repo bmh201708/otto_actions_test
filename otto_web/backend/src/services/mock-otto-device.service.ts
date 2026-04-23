@@ -12,7 +12,7 @@ export interface OttoDeviceService {
   executeSequence(sequenceId: string): Promise<RobotStatus>;
 }
 
-const VALID_ACTIONS = new Set([
+export const VALID_ACTIONS = new Set([
   "actionDoubleGreet",
   "actionFullBodyWave",
   "actionWaveGoodbye",

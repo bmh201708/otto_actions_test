@@ -154,50 +154,96 @@ export default function OraclePage() {
             <div className="py-12">
               <OracleResultCard reading={recentReading} streamedInterpretation={streamedInterpretation} />
 
-              <div className="mt-8 rounded-[2rem] bg-surface-container-lowest p-8 shadow-talisman">
-                <div className="mb-6 flex items-center justify-between">
+              <div className="relative mt-8 overflow-hidden rounded-[2rem] border border-primary/10 bg-surface-container-lowest p-8 shadow-talisman">
+                <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-primary/7 to-transparent" />
+
+                <div className="relative mb-6 flex items-center justify-between">
                   <div>
                     <h3 className="font-display text-3xl font-bold">Oracle Dialogue</h3>
                     <p className="mt-2 text-sm uppercase tracking-[0.24em] text-on-surface/45">Realtime LLM counsel</p>
                   </div>
-                  <div className="rounded-full bg-surface px-3 py-1 text-xs uppercase tracking-[0.24em] text-primary">
+                  <div className="rounded-full border border-primary/10 bg-surface px-4 py-2 text-xs uppercase tracking-[0.24em] text-primary shadow-[0_12px_28px_-24px_rgba(183,16,42,0.8)]">
                     {conversations.length} Threads
                   </div>
                 </div>
 
-                <div className="grid grid-cols-[240px_1fr] gap-6">
-                  <div className="rounded-[1.4rem] bg-surface-container-low p-4">
+                <div className="grid grid-cols-[260px_1fr] gap-6">
+                  <div className="rounded-[1.6rem] border border-primary/10 bg-gradient-to-b from-surface-container-low to-surface p-4">
+                    <div className="mb-4 flex items-center justify-between px-2">
+                      <div className="text-xs font-semibold uppercase tracking-[0.24em] text-on-surface/45">Threads</div>
+                      <span className="material-symbols-outlined text-primary/70">forum</span>
+                    </div>
+
                     <div className="space-y-2">
-                      {conversations.map((conversation) => (
-                        <button
-                          key={conversation.id}
-                          onClick={() => setActiveConversationId(conversation.id)}
-                          className={`w-full rounded-[1rem] px-4 py-3 text-left ${activeConversationId === conversation.id ? "bg-surface text-primary" : "text-on-surface/65"}`}
-                        >
-                          <div className="font-semibold">{conversation.title}</div>
-                        </button>
-                      ))}
+                      {conversations.length ? (
+                        conversations.map((conversation) => (
+                          <button
+                            key={conversation.id}
+                            onClick={() => setActiveConversationId(conversation.id)}
+                            className={`w-full rounded-[1.1rem] border px-4 py-3 text-left transition-all ${
+                              activeConversationId === conversation.id
+                                ? "border-primary/20 bg-surface text-primary shadow-[0_16px_30px_-24px_rgba(183,16,42,0.9)]"
+                                : "border-transparent bg-transparent text-on-surface/65 hover:border-primary/10 hover:bg-surface/70"
+                            }`}
+                          >
+                            <div className="line-clamp-2 font-semibold leading-6">{conversation.title}</div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="rounded-[1.1rem] bg-surface/75 px-4 py-5 text-sm leading-7 text-on-surface/55">
+                          Your divination threads will collect here once you start a dialogue.
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="rounded-[1.4rem] bg-surface-container-low p-4">
-                    <div className="max-h-[320px] space-y-4 overflow-y-auto scrollbar-thin pr-2">
-                      {messages.map((message) => (
-                        <div key={message.id} className={`rounded-[1.2rem] px-4 py-3 ${message.role === "assistant" ? "bg-surface" : "bg-primary/8"}`}>
-                          <div className="mb-1 text-xs uppercase tracking-[0.2em] text-on-surface/35">{message.role}</div>
-                          <div className="whitespace-pre-wrap leading-7">{message.content}</div>
-                        </div>
-                      ))}
+                  <div className="rounded-[1.6rem] border border-primary/10 bg-gradient-to-b from-surface-container-low to-surface p-5">
+                    <div className="mb-4 flex items-center justify-between rounded-[1.2rem] bg-surface/80 px-4 py-3">
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.24em] text-on-surface/45">Live Channel</div>
+                        <div className="mt-1 text-sm text-on-surface/65">Streaming counsel for Otto interaction design</div>
+                      </div>
+                      <div className="flex items-center gap-2 rounded-full bg-primary/8 px-3 py-1 text-xs uppercase tracking-[0.2em] text-primary">
+                        <span className="h-2 w-2 rounded-full bg-primary" />
+                        Live
+                      </div>
                     </div>
 
-                    <form onSubmit={handleChat} className="mt-4 flex gap-3">
+                    <div className="max-h-[360px] min-h-[260px] space-y-4 overflow-y-auto rounded-[1.4rem] bg-surface/70 p-4 scrollbar-thin">
+                      {messages.length ? (
+                        messages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`rounded-[1.25rem] border px-4 py-3 shadow-[0_18px_40px_-34px_rgba(27,29,14,0.45)] ${
+                              message.role === "assistant"
+                                ? "border-primary/10 bg-white/90"
+                                : "ml-10 border-primary/15 bg-primary/8"
+                            }`}
+                          >
+                            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-on-surface/35">
+                              {message.role}
+                            </div>
+                            <div className="whitespace-pre-wrap text-[15px] leading-7">{message.content}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex min-h-[228px] items-center justify-center rounded-[1.25rem] border border-dashed border-primary/15 bg-surface-container-low/70 px-8 text-center text-sm leading-7 text-on-surface/55">
+                          Ask for a greeting, a movement cue, or an exhibit interaction script and the oracle will answer here.
+                        </div>
+                      )}
+                    </div>
+
+                    <form onSubmit={handleChat} className="mt-4 flex items-center gap-3 rounded-[1.4rem] bg-surface px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
                       <input
-                        className="flex-1 rounded-full bg-surface px-5 py-3 outline-none"
+                        className="flex-1 bg-transparent px-3 py-2 text-[15px] outline-none placeholder:text-on-surface/35"
                         value={chatInput}
                         onChange={(event) => setChatInput(event.target.value)}
                         placeholder="Ask the oracle how Otto should respond..."
                       />
-                      <button className="pill-button bg-primary text-on-primary shadow-glow">Send</button>
+                      <button className="pill-button bg-gradient-to-r from-primary to-primary-container text-on-primary shadow-glow">
+                        <span className="material-symbols-outlined text-[18px]">send</span>
+                        Send
+                      </button>
                     </form>
                   </div>
                 </div>

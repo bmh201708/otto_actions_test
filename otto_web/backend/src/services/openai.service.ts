@@ -1,5 +1,9 @@
 import OpenAI from "openai";
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import type {
+  ChatCompletionCreateParamsNonStreaming,
+  ChatCompletionMessageParam,
+  ChatCompletionTool
+} from "openai/resources/chat/completions";
 
 import { env, isLlmConfigured } from "../config/env";
 
@@ -32,11 +36,28 @@ export async function createChatStream(messages: ChatCompletionMessageParam[]) {
 }
 
 export async function createChatCompletion(messages: ChatCompletionMessageParam[]) {
+  return createChatCompletionWithOptions({
+    messages
+  });
+}
+
+export async function createChatCompletionWithOptions(
+  options: Pick<ChatCompletionCreateParamsNonStreaming, "messages" | "tools" | "tool_choice" | "parallel_tool_calls">
+) {
   const client = createClient();
 
   return client.chat.completions.create({
     model: env.LLM_MODEL!,
     temperature: 0.85,
-    messages
+    ...options
+  });
+}
+
+export async function createToolPlanningCompletion(messages: ChatCompletionMessageParam[], tools: ChatCompletionTool[]) {
+  return createChatCompletionWithOptions({
+    messages,
+    tools,
+    tool_choice: "auto",
+    parallel_tool_calls: true
   });
 }
