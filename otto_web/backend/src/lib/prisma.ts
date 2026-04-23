@@ -1,12 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __ottoPrisma: PrismaClient | undefined;
-}
-
-export const prisma = global.__ottoPrisma ?? new PrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  global.__ottoPrisma = prisma;
-}
+// Avoid caching the client across tsx watch reloads; schema changes can leave
+// development with a stale delegate surface such as a missing userMemory model.
+export const prisma = new PrismaClient();

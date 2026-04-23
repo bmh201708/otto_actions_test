@@ -5,6 +5,13 @@ import type { ChatCompletionMessageParam, ChatCompletionMessageToolCall } from "
 import { prisma } from "../lib/prisma";
 import { createChatStream, createToolPlanningCompletion } from "../services/openai.service";
 import {
+  extractAndStoreUserMemories,
+  getMemoryContext,
+  markMemoriesUsed,
+  shouldEmitMemoryDebug,
+  toMemoryDebugPayload
+} from "../services/memory.service";
+import {
   buildFinalResponseMessages,
   buildToolPlanningMessages,
   executeToolCalls,
@@ -95,6 +102,7 @@ chatRouter.get("/stream/:conversationId", async (request, response) => {
   openSse(response);
 
   try {
+    const userId = request.user!.sub;
     const baseMessages: ChatCompletionMessageParam[] = conversation.messages
       .filter((message) => !(message.id === assistantMessageId && message.role === "assistant"))
       .map((message) => ({
@@ -102,8 +110,22 @@ chatRouter.get("/stream/:conversationId", async (request, response) => {
         content: message.content
       }));
 
-    const plannedMessages = await runToolCallingLoop(baseMessages, response);
-    const finalMessages = buildFinalResponseMessages(plannedMessages);
+    const latestUserMessage = [...conversation.messages]
+      .reverse()
+      .find((message) => !(message.id === assistantMessageId) && message.role === "user");
+
+    const { memories, context: memoryContext } = await getMemoryContext(userId);
+    if (memories.length) {
+      await markMemoriesUsed(memories.map((memory) => memory.id));
+      if (shouldEmitMemoryDebug()) {
+        sendSse(response, "chat.memory_hits", {
+          memories: toMemoryDebugPayload(memories)
+        });
+      }
+    }
+
+    const plannedMessages = await runToolCallingLoop(baseMessages, response, memoryContext);
+    const finalMessages = buildFinalResponseMessages(plannedMessages, memoryContext);
 
     const stream = await createChatStream(finalMessages);
     let assistantContent = "";
@@ -128,6 +150,14 @@ chatRouter.get("/stream/:conversationId", async (request, response) => {
       data: { updatedAt: new Date() }
     });
 
+    if (latestUserMessage?.content.trim() && assistantContent.trim()) {
+      void extractAndStoreUserMemories({
+        userId,
+        userInput: latestUserMessage.content,
+        assistantReply: assistantContent
+      });
+    }
+
     sendSse(response, "chat.done", { ok: true });
     return response.end();
   } catch (error) {
@@ -137,11 +167,11 @@ chatRouter.get("/stream/:conversationId", async (request, response) => {
   }
 });
 
-async function runToolCallingLoop(messages: ChatCompletionMessageParam[], response: Response) {
+async function runToolCallingLoop(messages: ChatCompletionMessageParam[], response: Response, memoryContext: string) {
   const loopMessages = [...messages];
 
   for (let iteration = 0; iteration < 3; iteration += 1) {
-    const completion = await createToolPlanningCompletion(buildToolPlanningMessages(loopMessages), ottoTools);
+    const completion = await createToolPlanningCompletion(buildToolPlanningMessages(loopMessages, memoryContext), ottoTools);
     const assistantMessage = completion.choices[0]?.message;
     const toolCalls = assistantMessage?.tool_calls as ChatCompletionMessageToolCall[] | undefined;
 

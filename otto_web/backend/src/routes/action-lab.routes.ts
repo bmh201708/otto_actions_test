@@ -2,10 +2,9 @@ import { Prisma } from "@prisma/client";
 import { Router } from "express";
 
 import { prisma } from "../lib/prisma";
-import { MockOttoDeviceService } from "../services/mock-otto-device.service";
+import { ottoDevice as device } from "../services/otto-device";
 
 export const actionLabRouter = Router();
-const device = new MockOttoDeviceService(prisma);
 
 const includeSteps = {
   steps: {

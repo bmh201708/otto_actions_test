@@ -18,6 +18,26 @@ enum MessageRole {
   assistant
 }
 
+enum MemoryKind {
+  profile
+  preference
+  interaction_style
+  favorite_action
+  constraint
+  memory_summary
+}
+
+enum MemorySource {
+  auto_extracted
+  manual
+}
+
+enum MemoryStatus {
+  active
+  archived
+  rejected
+}
+
 model User {
   id           String           @id @default(cuid())
   email        String           @unique
@@ -29,6 +49,7 @@ model User {
   readings     OracleReading[]
   logs         RobotActionLog[]
   conversations Conversation[]
+  memories     UserMemory[]
 }
 
 model RobotStatus {
@@ -115,4 +136,22 @@ model Message {
   updatedAt      DateTime    @updatedAt
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model UserMemory {
+  id         String       @id @default(cuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind       MemoryKind
+  content    String       @db.Text
+  summary    String
+  salience   Int          @default(50)
+  source     MemorySource @default(auto_extracted)
+  status     MemoryStatus @default(active)
+  lastUsedAt DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([userId, status, kind])
+  @@index([userId, lastUsedAt])
 }

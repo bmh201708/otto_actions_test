@@ -1,6 +1,8 @@
 import { Prisma } from "@prisma/client";
 import type { PrismaClient, RobotStatus } from "@prisma/client";
 
+import { normalizeActionRequest, VALID_ACTIONS } from "./otto-action-specs.service";
+
 type Direction = "forward" | "backward" | "left" | "right";
 
 export interface OttoDeviceService {
@@ -11,16 +13,6 @@ export interface OttoDeviceService {
   calibrate(): Promise<RobotStatus>;
   executeSequence(sequenceId: string): Promise<RobotStatus>;
 }
-
-export const VALID_ACTIONS = new Set([
-  "actionDoubleGreet",
-  "actionFullBodyWave",
-  "actionWaveGoodbye",
-  "actionTwistHip",
-  "actionCheer",
-  "actionSleep",
-  "actionHeroPose"
-]);
 
 export class MockOttoDeviceService implements OttoDeviceService {
   constructor(private readonly prisma: PrismaClient) {}
@@ -34,7 +26,8 @@ export class MockOttoDeviceService implements OttoDeviceService {
       throw new Error("Unsupported action key");
     }
 
-    return this.bumpStatus(actionKey, params);
+    const normalized = normalizeActionRequest(actionKey, params ?? undefined);
+    return this.bumpStatus(actionKey, normalized.params as unknown as Prisma.JsonValue);
   }
 
   async move(direction: string) {

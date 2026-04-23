@@ -19,8 +19,8 @@ const int PIN_ECHO = 33;
 #define I2S_MIC_PORT I2S_NUM_0 
 #define I2S_AMP_PORT I2S_NUM_1 
 
-const char* wifi_name = "lgrrr";
-const char* wifi_password = "999999999"; 
+const char* wifi_name = "jim";
+const char* wifi_password = "jyk201708"; 
 const char* baiduAK = "rNrzpMFagAtyTudGiq58M3NH";
 const char* baiduSK = "BGO8ABwxIm2k3lNYISWw445o3hhXwx15";
 
@@ -209,6 +209,8 @@ void setup() {
 
   WiFi.begin(wifi_name, wifi_password);
   while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.printf("✅ WiFi已连接，IP地址: %s\n", WiFi.localIP().toString().c_str());
 
   i2s_config_t amp_cfg = { .mode = (i2s_mode_t)(I2S_MODE_MASTER|I2S_MODE_TX), .sample_rate = 8000, .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT, .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT, .communication_format = I2S_COMM_FORMAT_STAND_I2S, .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1, .dma_buf_count = 8, .dma_buf_len = 512, .use_apll = false, .tx_desc_auto_clear = true };
   i2s_pin_config_t amp_p = { .mck_io_num = I2S_PIN_NO_CHANGE, .bck_io_num = AMP_BCLK, .ws_io_num = AMP_LRC, .data_out_num = AMP_DIN, .data_in_num = I2S_PIN_NO_CHANGE };

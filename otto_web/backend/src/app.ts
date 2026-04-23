@@ -7,6 +7,7 @@ import { requireAuth } from "./middleware/auth";
 import { actionLabRouter } from "./routes/action-lab.routes";
 import { authRouter } from "./routes/auth.routes";
 import { chatRouter } from "./routes/chat.routes";
+import { memoryRouter } from "./routes/memory.routes";
 import { oracleRouter } from "./routes/oracle.routes";
 import { robotRouter } from "./routes/robot.routes";
 import { systemRouter } from "./routes/system.routes";
@@ -29,6 +30,7 @@ export function createApp() {
   app.use("/api/oracle", requireAuth, oracleRouter);
   app.use("/api/action-lab", requireAuth, actionLabRouter);
   app.use("/api/chat", requireAuth, chatRouter);
+  app.use("/api/memory", requireAuth, memoryRouter);
 
   app.use((error: Error, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
     console.error(error);

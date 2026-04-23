@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { listActionSpecs } from "../services/otto-action-specs.service";
 import { ottoDevice as device } from "../services/otto-device";
 
 export const robotRouter = Router();
@@ -7,6 +8,10 @@ export const robotRouter = Router();
 robotRouter.get("/status", async (_request, response) => {
   const status = await device.getStatus();
   return response.json({ status });
+});
+
+robotRouter.get("/actions", async (_request, response) => {
+  return response.json({ actions: listActionSpecs() });
 });
 
 robotRouter.post("/actions/:actionKey/execute", async (request, response) => {
