@@ -64,7 +64,15 @@ voiceRouter.post("/listen/stop", requireAuth, async (request, response) => {
     });
 
     if (env.ROBOT_MODE === "mock") {
-      voiceSession = await completeVoiceSessionFromTranscript(voiceSession.id, request.user!.sub, "请热情地欢迎现场观众。");
+      const prepared = await prepareVoiceSessionFromTranscript(voiceSession.id, "请热情地欢迎现场观众。");
+      if (prepared.status !== VoiceSessionStatus.failed) {
+        await finalizeVoiceSessionResponse(voiceSession.id, request.user!.sub, prepared.transcript ?? "", voiceSession.conversationId);
+        voiceSession = await prisma.voiceSession.findUniqueOrThrow({
+          where: { id: voiceSession.id }
+        });
+      } else {
+        voiceSession = prepared;
+      }
     }
 
     return response.json({ voiceSession, deviceStatus });

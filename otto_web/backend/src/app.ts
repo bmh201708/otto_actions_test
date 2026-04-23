@@ -8,6 +8,7 @@ import { actionLabRouter } from "./routes/action-lab.routes";
 import { authRouter } from "./routes/auth.routes";
 import { chatRouter } from "./routes/chat.routes";
 import { memoryRouter } from "./routes/memory.routes";
+import { nfcRouter } from "./routes/nfc.routes";
 import { oracleRouter } from "./routes/oracle.routes";
 import { robotRouter } from "./routes/robot.routes";
 import { systemRouter } from "./routes/system.routes";
@@ -34,6 +35,7 @@ export function createApp() {
   app.use(cookieParser(env.COOKIE_SECRET));
 
   app.use("/api", systemRouter);
+  app.use("/api/public/nfc", nfcRouter);
   app.use("/api/auth", authRouter);
   app.use("/api/robot", requireAuth, robotRouter);
   app.use("/api/oracle", requireAuth, oracleRouter);
