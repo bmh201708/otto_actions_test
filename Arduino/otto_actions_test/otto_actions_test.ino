@@ -990,6 +990,22 @@ void handleSequenceCommand() {
   acceptCommand("sequence", server.arg("plain"), "execute-sequence");
 }
 
+void handleTheaterCommand() {
+  if (!ensureAuthorized()) return;
+  if (deviceState.isListening) {
+    sendErrorJson(409, "Robot is currently listening");
+    return;
+  }
+  DynamicJsonDocument doc(256);
+  if (!parseJsonBody(doc)) return;
+  String choice = doc["choice"] | "";
+  if (choice != "1" && choice != "2" && choice != "3") {
+    sendErrorJson(400, "choice must be 1, 2, or 3");
+    return;
+  }
+  acceptCommand("theater", server.arg("plain"), "interactive-theater");
+}
+
 void handleListenStartCommand() {
   if (!ensureAuthorized()) return;
   DynamicJsonDocument doc(1024);
@@ -1052,6 +1068,7 @@ void configureHttpServer() {
   server.on("/commands/speak", HTTP_POST, handleSpeakCommand);
   server.on("/commands/calibrate", HTTP_POST, handleCalibrateCommand);
   server.on("/commands/sequence", HTTP_POST, handleSequenceCommand);
+  server.on("/commands/theater", HTTP_POST, handleTheaterCommand);
   server.on("/commands/listen/start", HTTP_POST, handleListenStartCommand);
   server.on("/commands/listen/stop", HTTP_POST, handleListenStopCommand);
   server.onNotFound([]() { sendErrorJson(404, "Not found"); });

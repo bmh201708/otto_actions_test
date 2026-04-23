@@ -133,6 +133,54 @@ a {
   box-shadow: 0 8px 18px -12px rgba(183, 16, 42, 0.55);
 }
 
+@keyframes fortuneFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes fortunePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(183, 16, 42, 0.22);
+  }
+  70% {
+    box-shadow: 0 0 0 18px rgba(183, 16, 42, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(183, 16, 42, 0);
+  }
+}
+
+@keyframes fortuneSweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.fortune-float {
+  animation: fortuneFloat 4.2s ease-in-out infinite;
+}
+
+.fortune-pulse {
+  animation: fortunePulse 2.3s ease-out infinite;
+}
+
+.fortune-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.44) 48%, transparent 100%);
+  transform: translateX(-120%);
+  animation: fortuneSweep 2.8s ease-in-out infinite;
+}
+
 @layer components {
   .nav-link {
     @apply ml-4 flex items-center gap-4 rounded-l-full py-3 pl-4 text-sm font-medium tracking-wide transition-all duration-300 hover:translate-x-1;

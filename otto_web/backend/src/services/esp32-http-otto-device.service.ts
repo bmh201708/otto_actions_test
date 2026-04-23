@@ -86,6 +86,10 @@ export class Esp32HttpOttoDeviceService implements OttoDeviceService {
     return this.sendCommand("/commands/sequence", { steps });
   }
 
+  async executeTheater(choice: "1" | "2" | "3") {
+    return this.sendCommand("/commands/theater", { choice });
+  }
+
   async startListening(sessionId: string, uploadUrl: string) {
     const payload = await this.fetchJson<DeviceCommandResponse>("/commands/listen/start", {
       method: "POST",

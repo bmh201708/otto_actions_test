@@ -33,6 +33,7 @@ export interface OttoDeviceService {
   speak(text: string): Promise<RobotStatus>;
   calibrate(): Promise<RobotStatus>;
   executeSequence(steps: SequenceExecutionStep[]): Promise<RobotStatus>;
+  executeTheater(choice: "1" | "2" | "3"): Promise<RobotStatus>;
   startListening(sessionId: string, uploadUrl: string): Promise<VoiceDeviceStatus>;
   stopListening(): Promise<VoiceDeviceStatus>;
   getVoiceStatus(): Promise<VoiceDeviceStatus>;
@@ -71,6 +72,10 @@ export class MockOttoDeviceService implements OttoDeviceService {
       stepCount: steps.length,
       steps
     });
+  }
+
+  async executeTheater(choice: "1" | "2" | "3") {
+    return this.bumpStatus(`interactive-theater:${choice}`, { choice });
   }
 
   async startListening(sessionId: string) {
