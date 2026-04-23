@@ -1,23 +1,11 @@
 import { Router } from "express";
-import type { Response } from "express";
-import type { ChatCompletionMessageParam, ChatCompletionMessageToolCall } from "openai/resources/chat/completions";
+import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
 import { prisma } from "../lib/prisma";
-import { createChatStream, createToolPlanningCompletion } from "../services/openai.service";
-import {
-  extractAndStoreUserMemories,
-  getMemoryContext,
-  markMemoriesUsed,
-  shouldEmitMemoryDebug,
-  toMemoryDebugPayload
-} from "../services/memory.service";
-import {
-  buildFinalResponseMessages,
-  buildToolPlanningMessages,
-  executeToolCalls,
-  ottoTools,
-  toAssistantToolCallMessage
-} from "../services/otto-tools.service";
+import { createChatStream } from "../services/openai.service";
+import { loadConversationTurnContext, runToolPlanningLoop } from "../services/chat-orchestrator.service";
+import { extractAndStoreUserMemories, shouldEmitMemoryDebug } from "../services/memory.service";
+import { buildFinalResponseMessages } from "../services/otto-tools.service";
 import { openSse, sendSse } from "../services/sse";
 
 export const chatRouter = Router();
@@ -114,17 +102,29 @@ chatRouter.get("/stream/:conversationId", async (request, response) => {
       .reverse()
       .find((message) => !(message.id === assistantMessageId) && message.role === "user");
 
-    const { memories, context: memoryContext } = await getMemoryContext(userId);
-    if (memories.length) {
-      await markMemoriesUsed(memories.map((memory) => memory.id));
-      if (shouldEmitMemoryDebug()) {
-        sendSse(response, "chat.memory_hits", {
-          memories: toMemoryDebugPayload(memories)
-        });
-      }
+    const { memoryContext, memoryDebug, hasMemoryDebug } = await loadConversationTurnContext(
+      userId,
+      conversation.messages.filter((message) => !(message.id === assistantMessageId && message.role === "assistant"))
+    );
+    if (hasMemoryDebug && shouldEmitMemoryDebug()) {
+      sendSse(response, "chat.memory_hits", {
+        memories: memoryDebug
+      });
     }
 
-    const plannedMessages = await runToolCallingLoop(baseMessages, response, memoryContext);
+    const plannedMessages = await runToolPlanningLoop(baseMessages, memoryContext, async (event) => {
+      if (event.type === "tool_call") {
+        sendSse(response, "chat.tool_call", {
+          name: event.name,
+          arguments: event.arguments
+        });
+      } else {
+        sendSse(response, "chat.tool_result", {
+          name: event.name,
+          result: event.result
+        });
+      }
+    });
     const finalMessages = buildFinalResponseMessages(plannedMessages, memoryContext);
 
     const stream = await createChatStream(finalMessages);
@@ -166,38 +166,3 @@ chatRouter.get("/stream/:conversationId", async (request, response) => {
     return response.end();
   }
 });
-
-async function runToolCallingLoop(messages: ChatCompletionMessageParam[], response: Response, memoryContext: string) {
-  const loopMessages = [...messages];
-
-  for (let iteration = 0; iteration < 3; iteration += 1) {
-    const completion = await createToolPlanningCompletion(buildToolPlanningMessages(loopMessages, memoryContext), ottoTools);
-    const assistantMessage = completion.choices[0]?.message;
-    const toolCalls = assistantMessage?.tool_calls as ChatCompletionMessageToolCall[] | undefined;
-
-    if (!toolCalls?.length) {
-      return loopMessages;
-    }
-
-    loopMessages.push(toAssistantToolCallMessage(toolCalls));
-    const { events, toolMessages } = await executeToolCalls(toolCalls);
-
-    for (const event of events) {
-      if (event.type === "tool_call") {
-        sendSse(response, "chat.tool_call", {
-          name: event.name,
-          arguments: event.arguments
-        });
-      } else {
-        sendSse(response, "chat.tool_result", {
-          name: event.name,
-          result: event.result
-        });
-      }
-    }
-
-    loopMessages.push(...toolMessages);
-  }
-
-  return loopMessages;
-}

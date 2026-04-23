@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { env, isLlmConfigured } from "../config/env";
+import { env, isLlmConfigured, isSttConfigured } from "../config/env";
 import { requireAuth } from "../middleware/auth";
 
 export const systemRouter = Router();
@@ -13,6 +13,7 @@ systemRouter.get("/config", requireAuth, (_request, response) => {
   return response.json({
     config: {
       llmConfigured: isLlmConfigured(),
+      sttConfigured: isSttConfigured(),
       model: env.LLM_MODEL || null,
       baseUrl: env.LLM_BASE_URL || null,
       robotMode: env.ROBOT_MODE

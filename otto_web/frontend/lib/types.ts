@@ -17,6 +17,7 @@ export type RobotStatus = {
   coreTempC: number;
   memoryPercent: number;
   firmwareVersion: string;
+  lastError?: string | null;
 };
 
 export type OracleReading = {
@@ -65,7 +66,26 @@ export type Message = {
 
 export type ConfigSnapshot = {
   llmConfigured: boolean;
+  sttConfigured?: boolean;
   model: string | null;
   baseUrl: string | null;
   robotMode: string;
+};
+
+export type VoiceSession = {
+  id: string;
+  status: "idle" | "recording" | "uploaded" | "transcribing" | "responding" | "completed" | "failed";
+  transcript: string | null;
+  assistantReply: string | null;
+  error: string | null;
+  conversationId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DeviceVoiceStatus = {
+  isListening: boolean;
+  audioUploadState: "idle" | "recording" | "uploading" | "uploaded" | "failed";
+  lastTranscriptPreview: string | null;
+  activeVoiceSessionId: string | null;
 };

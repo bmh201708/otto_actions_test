@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: otto_web
+      POSTGRES_USER: otto
+      POSTGRES_PASSWORD: otto
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U otto -d otto_web"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    image: localhost/otto_web_api:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env.production
+    ports:
+      - "4000:4000"
+
+volumes:
+  postgres_prod_data:

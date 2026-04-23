@@ -11,6 +11,7 @@ import { memoryRouter } from "./routes/memory.routes";
 import { oracleRouter } from "./routes/oracle.routes";
 import { robotRouter } from "./routes/robot.routes";
 import { systemRouter } from "./routes/system.routes";
+import { voiceRouter } from "./routes/voice.routes";
 
 export function createApp() {
   const app = express();
@@ -39,6 +40,7 @@ export function createApp() {
   app.use("/api/action-lab", requireAuth, actionLabRouter);
   app.use("/api/chat", requireAuth, chatRouter);
   app.use("/api/memory", requireAuth, memoryRouter);
+  app.use("/api/voice", voiceRouter);
 
   app.use((error: Error, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
     console.error(error);

@@ -38,6 +38,16 @@ enum MemoryStatus {
   rejected
 }
 
+enum VoiceSessionStatus {
+  idle
+  recording
+  uploaded
+  transcribing
+  responding
+  completed
+  failed
+}
+
 model User {
   id           String           @id @default(cuid())
   email        String           @unique
@@ -50,6 +60,7 @@ model User {
   logs         RobotActionLog[]
   conversations Conversation[]
   memories     UserMemory[]
+  voiceSessions VoiceSession[]
 }
 
 model RobotStatus {
@@ -125,6 +136,7 @@ model Conversation {
   userId    String?
   user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   messages  Message[]
+  voiceSessions VoiceSession[]
 }
 
 model Message {
@@ -154,4 +166,22 @@ model UserMemory {
 
   @@index([userId, status, kind])
   @@index([userId, lastUsedAt])
+}
+
+model VoiceSession {
+  id             String             @id @default(cuid())
+  userId         String
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  robotId        String?
+  status         VoiceSessionStatus @default(idle)
+  transcript     String?            @db.Text
+  assistantReply String?            @db.Text
+  error          String?
+  conversationId String?
+  conversation   Conversation?      @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([userId, updatedAt])
+  @@index([status, updatedAt])
 }

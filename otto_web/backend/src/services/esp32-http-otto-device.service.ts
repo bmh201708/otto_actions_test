@@ -3,7 +3,7 @@ import type { PrismaClient, RobotStatus } from "@prisma/client";
 
 import { env } from "../config/env";
 import { normalizeActionRequest, VALID_ACTIONS } from "./otto-action-specs.service";
-import type { OttoDeviceService, SequenceExecutionStep } from "./mock-otto-device.service";
+import type { OttoDeviceService, SequenceExecutionStep, VoiceDeviceStatus } from "./mock-otto-device.service";
 import { ensureRobotStatus, markRobotOffline, persistRobotStatus, signalStrengthFromRssi } from "./robot-status.store";
 
 type DeviceStatusPayload = {
@@ -19,6 +19,10 @@ type DeviceStatusPayload = {
   coreTempC?: number;
   lastError?: string | null;
   wifiRssi?: number | null;
+  isListening?: boolean;
+  audioUploadState?: "idle" | "recording" | "uploading" | "uploaded" | "failed";
+  lastTranscriptPreview?: string | null;
+  activeVoiceSessionId?: string | null;
 };
 
 type DeviceCommandResponse = {
@@ -80,6 +84,41 @@ export class Esp32HttpOttoDeviceService implements OttoDeviceService {
 
   async executeSequence(steps: SequenceExecutionStep[]) {
     return this.sendCommand("/commands/sequence", { steps });
+  }
+
+  async startListening(sessionId: string, uploadUrl: string) {
+    const payload = await this.fetchJson<DeviceCommandResponse>("/commands/listen/start", {
+      method: "POST",
+      body: JSON.stringify({ sessionId, uploadUrl })
+    });
+
+    if (!payload.ok || !payload.accepted) {
+      throw new Error(payload.error ?? "Device rejected listen/start");
+    }
+
+    return this.toVoiceStatus(payload.status ?? {});
+  }
+
+  async stopListening() {
+    const payload = await this.fetchJson<DeviceCommandResponse>("/commands/listen/stop", {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+
+    if (!payload.ok || !payload.accepted) {
+      throw new Error(payload.error ?? "Device rejected listen/stop");
+    }
+
+    return this.toVoiceStatus(payload.status ?? {});
+  }
+
+  async getVoiceStatus() {
+    const payload = await this.fetchJson<DeviceStatusResponse>("/status");
+    if (!payload.ok || !payload.status) {
+      throw new Error(payload.error ?? "Invalid device voice status response");
+    }
+
+    return this.toVoiceStatus(payload.status);
   }
 
   private async sendCommand(path: string, body: Record<string, unknown>) {
@@ -205,5 +244,14 @@ export class Esp32HttpOttoDeviceService implements OttoDeviceService {
     }
 
     return error instanceof Error ? error.message : "Unknown device error";
+  }
+
+  private toVoiceStatus(status: DeviceStatusPayload): VoiceDeviceStatus {
+    return {
+      isListening: status.isListening ?? false,
+      audioUploadState: status.audioUploadState ?? "idle",
+      lastTranscriptPreview: status.lastTranscriptPreview ?? null,
+      activeVoiceSessionId: status.activeVoiceSessionId ?? null
+    };
   }
 }

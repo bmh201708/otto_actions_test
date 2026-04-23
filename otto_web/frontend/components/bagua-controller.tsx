@@ -7,7 +7,7 @@ const directions = [
   { key: "backward", icon: "keyboard_arrow_down", position: "bottom-7 left-1/2 -translate-x-1/2" }
 ] as const;
 
-export function BaguaController({ onMove }: { onMove: (direction: string) => void }) {
+export function BaguaController({ onMove, disabled = false }: { onMove: (direction: string) => void; disabled?: boolean }) {
   return (
     <div className="relative mx-auto mt-8 aspect-square w-full max-w-[540px]">
       <div className="absolute inset-0 rounded-full border border-outline-variant/20 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.25),transparent_62%)] shadow-[0_0_80px_rgba(255,250,220,0.9)]" />
@@ -17,7 +17,8 @@ export function BaguaController({ onMove }: { onMove: (direction: string) => voi
           <button
             key={direction.key}
             onClick={() => onMove(direction.key)}
-            className={`absolute ${direction.position} flex h-16 w-16 items-center justify-center rounded-full bg-surface text-primary shadow-[0_10px_24px_-16px_rgba(27,29,14,0.35)] transition-transform hover:scale-105`}
+            disabled={disabled}
+            className={`absolute ${direction.position} flex h-16 w-16 items-center justify-center rounded-full bg-surface text-primary shadow-[0_10px_24px_-16px_rgba(27,29,14,0.35)] transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:scale-100`}
           >
             <span className="material-symbols-outlined text-[32px]">{direction.icon}</span>
           </button>

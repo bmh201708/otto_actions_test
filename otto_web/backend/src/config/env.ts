@@ -16,10 +16,14 @@ const envSchema = z.object({
   LLM_BASE_URL: z.string().optional().or(z.literal("")),
   LLM_API_KEY: z.string().optional().or(z.literal("")),
   LLM_MODEL: z.string().optional().or(z.literal("")),
+  BAIDU_SPEECH_APP_ID: z.string().optional().or(z.literal("")),
+  BAIDU_SPEECH_API_KEY: z.string().optional().or(z.literal("")),
+  BAIDU_SPEECH_SECRET_KEY: z.string().optional().or(z.literal("")),
   ROBOT_MODE: z.string().default("mock"),
   OTTO_DEVICE_BASE_URL: z.string().optional().or(z.literal("")),
   OTTO_DEVICE_TOKEN: z.string().optional().or(z.literal("")),
-  OTTO_DEVICE_TIMEOUT_MS: z.coerce.number().default(5000)
+  OTTO_DEVICE_TIMEOUT_MS: z.coerce.number().default(5000),
+  BACKEND_DEVICE_BASE_URL: z.string().optional().or(z.literal(""))
 });
 
 export const env = envSchema.parse(process.env);
@@ -32,4 +36,8 @@ export function getAllowedFrontendOrigins() {
 
 export function isLlmConfigured() {
   return Boolean(env.LLM_BASE_URL && env.LLM_API_KEY && env.LLM_MODEL);
+}
+
+export function isSttConfigured() {
+  return Boolean(env.BAIDU_SPEECH_APP_ID && env.BAIDU_SPEECH_API_KEY && env.BAIDU_SPEECH_SECRET_KEY);
 }

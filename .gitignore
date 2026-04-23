@@ -19,6 +19,7 @@ pnpm-debug.log*
 .env.test.local
 .env.production.local
 otto_web/backend/.env
+otto_web/backend/.env.production
 otto_web/frontend/.env.local
 
 # Node / frontend

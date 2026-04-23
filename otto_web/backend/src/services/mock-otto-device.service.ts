@@ -12,6 +12,20 @@ export type SequenceExecutionStep = {
   params?: Prisma.JsonValue | null;
 };
 
+export type VoiceDeviceStatus = {
+  isListening: boolean;
+  audioUploadState: "idle" | "recording" | "uploading" | "uploaded" | "failed";
+  lastTranscriptPreview: string | null;
+  activeVoiceSessionId: string | null;
+};
+
+const mockVoiceState: VoiceDeviceStatus = {
+  isListening: false,
+  audioUploadState: "idle",
+  lastTranscriptPreview: null,
+  activeVoiceSessionId: null
+};
+
 export interface OttoDeviceService {
   getStatus(): Promise<RobotStatus>;
   executeAction(actionKey: string, params?: Prisma.JsonValue): Promise<RobotStatus>;
@@ -19,6 +33,9 @@ export interface OttoDeviceService {
   speak(text: string): Promise<RobotStatus>;
   calibrate(): Promise<RobotStatus>;
   executeSequence(steps: SequenceExecutionStep[]): Promise<RobotStatus>;
+  startListening(sessionId: string, uploadUrl: string): Promise<VoiceDeviceStatus>;
+  stopListening(): Promise<VoiceDeviceStatus>;
+  getVoiceStatus(): Promise<VoiceDeviceStatus>;
 }
 
 export class MockOttoDeviceService implements OttoDeviceService {
@@ -54,6 +71,24 @@ export class MockOttoDeviceService implements OttoDeviceService {
       stepCount: steps.length,
       steps
     });
+  }
+
+  async startListening(sessionId: string) {
+    mockVoiceState.isListening = true;
+    mockVoiceState.audioUploadState = "recording";
+    mockVoiceState.activeVoiceSessionId = sessionId;
+    mockVoiceState.lastTranscriptPreview = null;
+    return { ...mockVoiceState };
+  }
+
+  async stopListening() {
+    mockVoiceState.isListening = false;
+    mockVoiceState.audioUploadState = "uploaded";
+    return { ...mockVoiceState };
+  }
+
+  async getVoiceStatus() {
+    return { ...mockVoiceState };
   }
 
   private async ensureStatus() {

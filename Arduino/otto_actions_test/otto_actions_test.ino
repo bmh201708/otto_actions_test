@@ -20,6 +20,10 @@ const int PIN_ECHO = 33;
 #define I2S_MIC_PORT I2S_NUM_0
 #define I2S_AMP_PORT I2S_NUM_1
 
+const int VOICE_SAMPLE_RATE = 8000;
+const int VOICE_MAX_SECONDS = 2;
+const size_t VOICE_MAX_PCM_BYTES = VOICE_SAMPLE_RATE * sizeof(int16_t) * VOICE_MAX_SECONDS;
+
 const char* wifi_name = "jim";
 const char* wifi_password = "jyk201708";
 const char* baiduAK = "rNrzpMFagAtyTudGiq58M3NH";
@@ -54,6 +58,10 @@ struct DeviceState {
   int batteryPercent;
   int coreTempC;
   String lastError;
+  bool isListening;
+  String audioUploadState;
+  String lastTranscriptPreview;
+  String activeVoiceSessionId;
 };
 
 struct CommandItem {
@@ -63,11 +71,17 @@ struct CommandItem {
   String payload;
 };
 
-DeviceState deviceState = {true, false, "idle", 0.0f, "Unknown", 0, "V.4.2.8", 12, 84, 42, ""};
+DeviceState deviceState = {true, false, "idle", 0.0f, "Unknown", 0, "V.4.2.8", 12, 84, 42, "", false, "idle", "", ""};
 CommandItem commandQueue[COMMAND_QUEUE_CAPACITY];
 int commandHead = 0;
 int commandTail = 0;
 int commandCount = 0;
+
+uint8_t voicePcmBuffer[VOICE_MAX_PCM_BYTES];
+size_t voiceBytesCaptured = 0;
+unsigned long voiceCaptureStartedAt = 0;
+bool pendingVoiceUpload = false;
+String pendingVoiceUploadUrl = "";
 
 // ================= 语音引擎 =================
 void speakBlocking(String text) {
@@ -193,6 +207,21 @@ void updateDeviceState(
   xSemaphoreGive(stateMutex);
 }
 
+void updateVoiceState(bool listening, const String& uploadState, const String& sessionId, const String& transcriptPreview) {
+  xSemaphoreTake(stateMutex, portMAX_DELAY);
+  deviceState.isListening = listening;
+  deviceState.audioUploadState = uploadState;
+  deviceState.activeVoiceSessionId = sessionId;
+  deviceState.lastTranscriptPreview = transcriptPreview;
+  if (listening) {
+    deviceState.currentAction = "listening";
+  } else if (!deviceState.isBusy && deviceState.currentAction == "listening") {
+    deviceState.currentAction = "idle";
+  }
+  deviceState.lastTelemetryAtMs = millis();
+  xSemaphoreGive(stateMutex);
+}
+
 void refreshTelemetry(bool sampleDistance) {
   float distance = sampleDistance ? readDistanceCm() : -1.0f;
   long rssi = WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : -100;
@@ -226,11 +255,189 @@ String buildStatusResponseJson(bool includeEnvelope = true) {
   status["coreTempC"] = deviceState.coreTempC;
   status["lastError"] = deviceState.lastError;
   status["wifiRssi"] = WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : -100;
+  status["isListening"] = deviceState.isListening;
+  status["audioUploadState"] = deviceState.audioUploadState;
+  status["lastTranscriptPreview"] = deviceState.lastTranscriptPreview;
+  status["activeVoiceSessionId"] = deviceState.activeVoiceSessionId;
   xSemaphoreGive(stateMutex);
 
   String body;
   serializeJson(doc, body);
   return body;
+}
+
+// ================= 麦克风录音 =================
+void initMicrophone() {
+  i2s_config_t mic_cfg = {
+    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
+    .sample_rate = VOICE_SAMPLE_RATE,
+    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+    .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
+    .communication_format = I2S_COMM_FORMAT_STAND_I2S,
+    .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
+    .dma_buf_count = 8,
+    .dma_buf_len = 256,
+    .use_apll = false,
+    .tx_desc_auto_clear = false
+  };
+  i2s_pin_config_t mic_p = {
+    .mck_io_num = I2S_PIN_NO_CHANGE,
+    .bck_io_num = MIC_SCK,
+    .ws_io_num = MIC_WS,
+    .data_out_num = I2S_PIN_NO_CHANGE,
+    .data_in_num = MIC_SD
+  };
+  i2s_driver_install(I2S_MIC_PORT, &mic_cfg, 0, NULL);
+  i2s_set_pin(I2S_MIC_PORT, &mic_p);
+  i2s_zero_dma_buffer(I2S_MIC_PORT);
+}
+
+void writeWavHeader(uint8_t* header, size_t pcmBytes) {
+  const uint32_t byteRate = VOICE_SAMPLE_RATE * sizeof(int16_t);
+  const uint32_t chunkSize = 36 + pcmBytes;
+  const uint32_t sampleRate = VOICE_SAMPLE_RATE;
+  const uint16_t blockAlign = sizeof(int16_t);
+  const uint16_t bitsPerSample = 16;
+  memcpy(header, "RIFF", 4);
+  memcpy(header + 4, &chunkSize, 4);
+  memcpy(header + 8, "WAVEfmt ", 8);
+  const uint32_t subChunk1Size = 16;
+  const uint16_t audioFormat = 1;
+  const uint16_t channels = 1;
+  memcpy(header + 16, &subChunk1Size, 4);
+  memcpy(header + 20, &audioFormat, 2);
+  memcpy(header + 22, &channels, 2);
+  memcpy(header + 24, &sampleRate, 4);
+  memcpy(header + 28, &byteRate, 4);
+  memcpy(header + 32, &blockAlign, 2);
+  memcpy(header + 34, &bitsPerSample, 2);
+  memcpy(header + 36, "data", 4);
+  memcpy(header + 40, &pcmBytes, 4);
+}
+
+bool startVoiceCapture(const String& sessionId, const String& uploadUrl, String& error) {
+  if (isBusy) {
+    error = "Robot is busy";
+    return false;
+  }
+  if (deviceState.isListening) {
+    error = "Voice capture already running";
+    return false;
+  }
+  if (pendingVoiceUpload) {
+    error = "Previous voice upload still in progress";
+    return false;
+  }
+  if (uploadUrl == "") {
+    error = "uploadUrl is required";
+    return false;
+  }
+
+  voiceBytesCaptured = 0;
+  voiceCaptureStartedAt = millis();
+  pendingVoiceUpload = false;
+  pendingVoiceUploadUrl = uploadUrl;
+  i2s_zero_dma_buffer(I2S_MIC_PORT);
+  updateVoiceState(true, "recording", sessionId, "");
+  return true;
+}
+
+bool stopVoiceCapture(bool autoStopped, String& error) {
+  if (!deviceState.isListening) {
+    error = "Voice capture is not running";
+    return false;
+  }
+
+  pendingVoiceUpload = true;
+  updateVoiceState(false, "uploading", deviceState.activeVoiceSessionId, deviceState.lastTranscriptPreview);
+  if (autoStopped) {
+    Serial.println("🎙️ 录音已达到上限，开始上传...");
+  } else {
+    Serial.println("🎙️ 录音已停止，开始上传...");
+  }
+  return true;
+}
+
+void captureMicrophoneChunk() {
+  if (!deviceState.isListening) {
+    return;
+  }
+
+  uint8_t sampleBuffer[1024];
+  size_t bytesRead = 0;
+  esp_err_t result = i2s_read(I2S_MIC_PORT, sampleBuffer, sizeof(sampleBuffer), &bytesRead, 1);
+  if (result != ESP_OK || bytesRead == 0) {
+    return;
+  }
+
+  size_t writable = min(bytesRead, VOICE_MAX_PCM_BYTES - voiceBytesCaptured);
+  if (writable > 0) {
+    memcpy(voicePcmBuffer + voiceBytesCaptured, sampleBuffer, writable);
+    voiceBytesCaptured += writable;
+  }
+
+  if (voiceBytesCaptured >= VOICE_MAX_PCM_BYTES || millis() - voiceCaptureStartedAt >= (unsigned long)VOICE_MAX_SECONDS * 1000UL) {
+    String error;
+    stopVoiceCapture(true, error);
+  }
+}
+
+bool uploadVoiceCapture(String& error) {
+  if (!pendingVoiceUpload) {
+    return true;
+  }
+  pendingVoiceUpload = false;
+
+  if (voiceBytesCaptured == 0) {
+    updateVoiceState(false, "failed", "", "");
+    error = "No audio captured";
+    return false;
+  }
+  if (pendingVoiceUploadUrl == "") {
+    updateVoiceState(false, "failed", "", "");
+    error = "Missing upload URL";
+    return false;
+  }
+
+  const size_t wavBytes = voiceBytesCaptured + 44;
+  uint8_t* wavBuffer = (uint8_t*)malloc(wavBytes);
+  if (wavBuffer == nullptr) {
+    updateVoiceState(false, "failed", "", "");
+    error = "Unable to allocate WAV buffer";
+    return false;
+  }
+
+  writeWavHeader(wavBuffer, voiceBytesCaptured);
+  memcpy(wavBuffer + 44, voicePcmBuffer, voiceBytesCaptured);
+
+  HTTPClient http;
+  http.begin(pendingVoiceUploadUrl);
+  http.addHeader("Content-Type", "audio/wav");
+  http.addHeader("X-Otto-Token", deviceToken);
+  http.addHeader("X-Audio-Sample-Rate", String(VOICE_SAMPLE_RATE));
+  http.setTimeout(45000);
+  int code = http.POST(wavBuffer, wavBytes);
+  String responseBody = http.getString();
+  free(wavBuffer);
+  http.end();
+
+  if (code < 200 || code >= 300) {
+    updateVoiceState(false, "failed", "", "");
+    error = responseBody != "" ? responseBody : "Voice upload failed";
+    return false;
+  }
+
+  DynamicJsonDocument doc(2048);
+  if (deserializeJson(doc, responseBody) == DeserializationError::Ok) {
+    String transcript = doc["transcript"] | "";
+    updateVoiceState(false, "uploaded", "", transcript);
+  } else {
+    updateVoiceState(false, "uploaded", "", "");
+  }
+
+  pendingVoiceUploadUrl = "";
+  voiceBytesCaptured = 0;
+  return true;
 }
 
 // ================= 命令队列 =================
@@ -712,6 +919,10 @@ void handleStatus() {
 
 void handleActionCommand() {
   if (!ensureAuthorized()) return;
+  if (deviceState.isListening) {
+    sendErrorJson(409, "Robot is currently listening");
+    return;
+  }
   DynamicJsonDocument doc(1024);
   if (!parseJsonBody(doc)) return;
   String actionKey = doc["actionKey"] | "";
@@ -724,6 +935,10 @@ void handleActionCommand() {
 
 void handleMoveCommand() {
   if (!ensureAuthorized()) return;
+  if (deviceState.isListening) {
+    sendErrorJson(409, "Robot is currently listening");
+    return;
+  }
   DynamicJsonDocument doc(256);
   if (!parseJsonBody(doc)) return;
   String direction = doc["direction"] | "";
@@ -736,6 +951,10 @@ void handleMoveCommand() {
 
 void handleSpeakCommand() {
   if (!ensureAuthorized()) return;
+  if (deviceState.isListening) {
+    sendErrorJson(409, "Robot is currently listening");
+    return;
+  }
   DynamicJsonDocument doc(1024);
   if (!parseJsonBody(doc)) return;
   String text = doc["text"] | "";
@@ -748,12 +967,20 @@ void handleSpeakCommand() {
 
 void handleCalibrateCommand() {
   if (!ensureAuthorized()) return;
+  if (deviceState.isListening) {
+    sendErrorJson(409, "Robot is currently listening");
+    return;
+  }
   String payload = server.hasArg("plain") ? server.arg("plain") : "{\"mode\":\"full\"}";
   acceptCommand("calibrate", payload, "calibrate");
 }
 
 void handleSequenceCommand() {
   if (!ensureAuthorized()) return;
+  if (deviceState.isListening) {
+    sendErrorJson(409, "Robot is currently listening");
+    return;
+  }
   DynamicJsonDocument doc(4096);
   if (!parseJsonBody(doc)) return;
   if (doc["steps"].isNull()) {
@@ -761,6 +988,58 @@ void handleSequenceCommand() {
     return;
   }
   acceptCommand("sequence", server.arg("plain"), "execute-sequence");
+}
+
+void handleListenStartCommand() {
+  if (!ensureAuthorized()) return;
+  DynamicJsonDocument doc(1024);
+  if (!parseJsonBody(doc)) return;
+
+  String sessionId = doc["sessionId"] | "";
+  String uploadUrl = doc["uploadUrl"] | "";
+  if (sessionId == "" || uploadUrl == "") {
+    sendErrorJson(400, "sessionId and uploadUrl are required");
+    return;
+  }
+
+  String error;
+  if (!startVoiceCapture(sessionId, uploadUrl, error)) {
+    sendErrorJson(409, error);
+    return;
+  }
+
+  lastRemoteCommandAt = millis();
+  DynamicJsonDocument body(1024);
+  body["ok"] = true;
+  body["accepted"] = true;
+  body["commandId"] = nextCommandId();
+  DynamicJsonDocument statusDoc(768);
+  deserializeJson(statusDoc, buildStatusResponseJson(false));
+  body["status"] = statusDoc.as<JsonObject>();
+  String json;
+  serializeJson(body, json);
+  sendJson(202, json);
+}
+
+void handleListenStopCommand() {
+  if (!ensureAuthorized()) return;
+  String error;
+  if (!stopVoiceCapture(false, error)) {
+    sendErrorJson(409, error);
+    return;
+  }
+
+  lastRemoteCommandAt = millis();
+  DynamicJsonDocument body(1024);
+  body["ok"] = true;
+  body["accepted"] = true;
+  body["commandId"] = nextCommandId();
+  DynamicJsonDocument statusDoc(768);
+  deserializeJson(statusDoc, buildStatusResponseJson(false));
+  body["status"] = statusDoc.as<JsonObject>();
+  String json;
+  serializeJson(body, json);
+  sendJson(202, json);
 }
 
 void configureHttpServer() {
@@ -773,6 +1052,8 @@ void configureHttpServer() {
   server.on("/commands/speak", HTTP_POST, handleSpeakCommand);
   server.on("/commands/calibrate", HTTP_POST, handleCalibrateCommand);
   server.on("/commands/sequence", HTTP_POST, handleSequenceCommand);
+  server.on("/commands/listen/start", HTTP_POST, handleListenStartCommand);
+  server.on("/commands/listen/stop", HTTP_POST, handleListenStopCommand);
   server.onNotFound([]() { sendErrorJson(404, "Not found"); });
   server.begin();
 }
@@ -817,6 +1098,7 @@ void setup() {
   };
   i2s_driver_install(I2S_AMP_PORT, &amp_cfg, 0, NULL);
   i2s_set_pin(I2S_AMP_PORT, &amp_p);
+  initMicrophone();
 
   HTTPClient httpAuth;
   String url = "https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=" + String(baiduAK) + "&client_secret=" + String(baiduSK);
@@ -837,14 +1119,25 @@ void setup() {
   Serial.println("✅ HTTP设备接口已启动");
   Serial.printf("🔐 设备Token: %s\n", deviceToken);
   Serial.println("✅ 串口签文触发已启用：输入 1/2/3 或 sign1/sign2/sign3");
+  Serial.println("✅ 麦克风录音接口已启用：/commands/listen/start 与 /commands/listen/stop");
 }
 
 void loop() {
   server.handleClient();
+  captureMicrophoneChunk();
 
   if (millis() - lastTelemetryRefreshAt > 1000) {
     lastTelemetryRefreshAt = millis();
     refreshTelemetry(true);
+  }
+
+  if (!deviceState.isListening && pendingVoiceUpload) {
+    String error;
+    if (!uploadVoiceCapture(error)) {
+      Serial.printf("❌ 语音上传失败: %s\n", error.c_str());
+    } else {
+      Serial.println("✅ 语音上传完成");
+    }
   }
 
   if (!isBusy && pendingCommandCount() == 0 && Serial.available() > 0) {

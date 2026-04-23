@@ -1,11 +1,13 @@
 import type {
   ConfigSnapshot,
   Conversation,
+  DeviceVoiceStatus,
   Message,
   OracleReading,
   RobotStatus,
   Sequence,
-  User
+  User,
+  VoiceSession
 } from "@/lib/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -33,7 +35,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(body.error ?? "Request failed");
+    const errorMessage =
+      body.error === "This operation was aborted" ? "Robot device request timed out" : body.error ?? "Request failed";
+    throw new Error(errorMessage);
   }
 
   return response.json() as Promise<T>;
@@ -69,6 +73,15 @@ export const api = {
       method: "POST"
     }),
   getConfig: () => request<{ config: ConfigSnapshot }>("/api/config"),
+  startListening: () =>
+    request<{ voiceSession: VoiceSession; deviceStatus: DeviceVoiceStatus }>("/api/voice/listen/start", {
+      method: "POST"
+    }),
+  stopListening: () =>
+    request<{ voiceSession: VoiceSession; deviceStatus: DeviceVoiceStatus }>("/api/voice/listen/stop", {
+      method: "POST"
+    }),
+  getVoiceStatus: () => request<{ voiceSession: VoiceSession | null; deviceStatus: DeviceVoiceStatus }>("/api/voice/status"),
   drawOracle: (prompt: string) =>
     request<{ reading: OracleReading }>("/api/oracle/draw", {
       method: "POST",

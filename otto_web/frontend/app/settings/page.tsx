@@ -12,8 +12,14 @@ export default function SettingsPage() {
   const [config, setConfig] = useState<ConfigSnapshot | null>(null);
 
   useEffect(() => {
-    void api.getRobotStatus().then((data) => setStatus(data.status));
-    void api.getConfig().then((data) => setConfig(data.config));
+    void api
+      .getRobotStatus()
+      .then((data) => setStatus(data.status))
+      .catch(() => setStatus(null));
+    void api
+      .getConfig()
+      .then((data) => setConfig(data.config))
+      .catch(() => setConfig(null));
   }, []);
 
   return (
@@ -143,6 +149,7 @@ export default function SettingsPage() {
                   <h5 className="text-xs font-semibold uppercase tracking-[0.24em] text-on-surface/45">Backend Configuration</h5>
                   <div className="mt-4 space-y-3 text-sm text-on-surface/70">
                     <div>LLM Configured: {config?.llmConfigured ? "Yes" : "No"}</div>
+                    <div>STT Configured: {config?.sttConfigured ? "Yes" : "No"}</div>
                     <div>Provider Base URL: {config?.baseUrl ?? "Not configured"}</div>
                     <div>Robot Mode: {config?.robotMode ?? "mock"}</div>
                     <div>Model: {config?.model ?? "Not configured"}</div>
