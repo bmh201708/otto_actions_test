@@ -115,6 +115,13 @@ actionLabRouter.post("/sequences/:id/execute", async (request, response) => {
     return response.status(404).json({ error: "Sequence not found" });
   }
 
-  const status = await device.executeSequence(sequence.id);
+  const status = await device.executeSequence(
+    sequence.steps.map((step) => ({
+      label: step.label,
+      actionKey: step.actionKey,
+      offsetMs: step.offsetMs,
+      params: step.params
+    }))
+  );
   return response.json({ status });
 });

@@ -2,8 +2,15 @@ import { Prisma } from "@prisma/client";
 import type { PrismaClient, RobotStatus } from "@prisma/client";
 
 import { normalizeActionRequest, VALID_ACTIONS } from "./otto-action-specs.service";
+import { ensureRobotStatus, persistRobotStatus } from "./robot-status.store";
 
 type Direction = "forward" | "backward" | "left" | "right";
+export type SequenceExecutionStep = {
+  label: string;
+  actionKey: string;
+  offsetMs: number;
+  params?: Prisma.JsonValue | null;
+};
 
 export interface OttoDeviceService {
   getStatus(): Promise<RobotStatus>;
@@ -11,14 +18,14 @@ export interface OttoDeviceService {
   move(direction: Direction | string): Promise<RobotStatus>;
   speak(text: string): Promise<RobotStatus>;
   calibrate(): Promise<RobotStatus>;
-  executeSequence(sequenceId: string): Promise<RobotStatus>;
+  executeSequence(steps: SequenceExecutionStep[]): Promise<RobotStatus>;
 }
 
 export class MockOttoDeviceService implements OttoDeviceService {
   constructor(private readonly prisma: PrismaClient) {}
 
   async getStatus() {
-    return this.ensureStatus();
+    return ensureRobotStatus(this.prisma);
   }
 
   async executeAction(actionKey: string, params?: Prisma.JsonValue) {
@@ -42,32 +49,15 @@ export class MockOttoDeviceService implements OttoDeviceService {
     return this.bumpStatus("calibrate", { mode: "full" });
   }
 
-  async executeSequence(sequenceId: string) {
-    return this.bumpStatus("execute-sequence", { sequenceId });
+  async executeSequence(steps: SequenceExecutionStep[]) {
+    return this.bumpStatus("execute-sequence", {
+      stepCount: steps.length,
+      steps
+    });
   }
 
   private async ensureStatus() {
-    const existing = await this.prisma.robotStatus.findFirst({
-      orderBy: { createdAt: "asc" }
-    });
-
-    if (existing) {
-      return existing;
-    }
-
-    return this.prisma.robotStatus.create({
-      data: {
-        isOnline: true,
-        isBusy: false,
-        batteryPercent: 84,
-        signalStrength: "Stable",
-        distanceCm: 8.6,
-        currentAction: "idle",
-        coreTempC: 42,
-        memoryPercent: 12,
-        firmwareVersion: "V.4.2.8"
-      }
-    });
+    return ensureRobotStatus(this.prisma);
   }
 
   private async bumpStatus(actionKey: string, params?: Prisma.JsonValue) {
@@ -77,9 +67,9 @@ export class MockOttoDeviceService implements OttoDeviceService {
     const memoryPercent = Math.min(88, current.memoryPercent + 1);
     const coreTempC = Math.min(55, current.coreTempC + (actionKey === "calibrate" ? 2 : 1));
 
-    const updated = await this.prisma.robotStatus.update({
-      where: { id: current.id },
-      data: {
+    return persistRobotStatus(
+      this.prisma,
+      {
         isBusy: false,
         currentAction: actionKey,
         batteryPercent,
@@ -88,23 +78,11 @@ export class MockOttoDeviceService implements OttoDeviceService {
         coreTempC,
         signalStrength: batteryPercent < 35 ? "Weak" : "Stable",
         lastTelemetryAt: new Date()
-      }
-    });
-
-    await this.prisma.robotActionLog.create({
-      data: {
+      },
+      {
         actionKey,
-        params: this.toNullableJsonInput(params),
-        statusSnapshot: JSON.parse(JSON.stringify(updated)) as Prisma.InputJsonValue
+        params
       }
-    });
-
-    return updated;
-  }
-
-  private toNullableJsonInput(value?: Prisma.JsonValue | null) {
-    if (value === undefined) return undefined;
-    if (value === null) return Prisma.JsonNull;
-    return value as Prisma.InputJsonValue;
+    );
   }
 }

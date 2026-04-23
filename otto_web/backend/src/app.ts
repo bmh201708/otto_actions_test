@@ -2,7 +2,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 
-import { env } from "./config/env";
+import { env, getAllowedFrontendOrigins } from "./config/env";
 import { requireAuth } from "./middleware/auth";
 import { actionLabRouter } from "./routes/action-lab.routes";
 import { authRouter } from "./routes/auth.routes";
@@ -14,10 +14,18 @@ import { systemRouter } from "./routes/system.routes";
 
 export function createApp() {
   const app = express();
+  const allowedOrigins = new Set(getAllowedFrontendOrigins());
 
   app.use(
     cors({
-      origin: env.FRONTEND_ORIGIN,
+      origin(origin, callback) {
+        if (!origin || allowedOrigins.has(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        callback(new Error(`Origin ${origin} is not allowed by CORS`));
+      },
       credentials: true
     })
   );

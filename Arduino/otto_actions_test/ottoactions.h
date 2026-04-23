@@ -106,6 +106,12 @@ void playGesture(int duration) {
   }
 }
 
+int adjustAmplitudeForStyle(const String& style, int amplitude, int gentleDelta = -2, int energeticDelta = 2) {
+  if (style == "gentle" || style == "tight") return max(1, amplitude + gentleDelta);
+  if (style == "energetic" || style == "dramatic" || style == "pumped" || style == "victory") return amplitude + energeticDelta;
+  return amplitude;
+}
+
 
 // ==========================================
 // 4. 欧神动作库 (Otto Actions)
@@ -185,30 +191,39 @@ void actionFullBodyWave(int cycles = 3, int T_period = 2000) {
 }
 
 // 👋 动作：单侧挥手告别
-void actionWaveGoodbye(int steps = 3) {
-  float prepPos[6] = {90, 90, 90, 90, 135, 150};
+void actionWaveGoodbye(int steps = 3, int amplitude = 15, int tempo = 1000, int armBias = 45, String style = "classic") {
+  amplitude = constrain(adjustAmplitudeForStyle(style, amplitude), 8, 28);
+  armBias = constrain(armBias, 25, 65);
+  tempo = constrain(tempo, 600, 1600);
+  float prepPos[6] = {90, 90, 90, 90, 90 + armBias, 90 + min(60, armBias + 15)};
   smoothMove(prepPos, 1200);
-  osc[4].setParams(15, 45, 0, 1000);
-  osc[5].setParams(0, 60, 0, 1000);
-  playGesture(steps * 1000);
+  osc[4].setParams(amplitude, armBias, 0, tempo);
+  osc[5].setParams(0, min(60, armBias + 15), 0, tempo);
+  playGesture(steps * tempo);
 }
 
 // 🤝 动作：双手打招呼
-void actionDoubleGreet(int steps = 3) {
-  float prepPos[6] = {90, 90, 90, 90, 105, 75};
+void actionDoubleGreet(int steps = 3, int amplitude = 15, int tempo = 1200, int armBias = 15) {
+  amplitude = constrain(amplitude, 8, 24);
+  armBias = constrain(armBias, 5, 30);
+  tempo = constrain(tempo, 700, 1800);
+  float prepPos[6] = {90, 90, 90, 90, 90 + armBias, 90 - armBias};
   smoothMove(prepPos, 1000);
-  osc[4].setParams(15, 15, 0, 1200);
-  osc[5].setParams(15, -15, PI, 1200);
-  playGesture(steps * 1200);
+  osc[4].setParams(amplitude, armBias, 0, tempo);
+  osc[5].setParams(amplitude, -armBias, PI, tempo);
+  playGesture(steps * tempo);
 }
 
 // 🙌 动作：双手欢呼
-void actionCheer(int steps = 8) {
-  float prepPos[6] = {90, 90, 90, 90, 127, 53};
+void actionCheer(int steps = 8, int amplitude = 8, int tempo = 400, String style = "bright") {
+  amplitude = constrain(adjustAmplitudeForStyle(style, amplitude, -1, 2), 4, 16);
+  tempo = constrain(tempo, 220, 800);
+  int armOffset = style == "victory" ? 42 : 37;
+  float prepPos[6] = {90, 90, 90, 90, 90 + armOffset, 90 - armOffset};
   smoothMove(prepPos, 800);
-  osc[4].setParams(8, 37, 0, 400);
-  osc[5].setParams(8, -37, PI, 400);
-  playGesture(steps * 400);
+  osc[4].setParams(amplitude, armOffset, 0, tempo);
+  osc[5].setParams(amplitude, -armOffset, PI, tempo);
+  playGesture(steps * tempo);
 }
 
 // 🦵 动作：左/右侧抖腿
@@ -254,7 +269,14 @@ void actionSoothe(int duration = 10000) {
 }
 
 // ⚡ 动作：机械扭胯 (街舞律动)
-void actionTwistHip(int cycles = 4, int moveTime = 250, int pauseTime = 150) {
+void actionTwistHip(int cycles = 4, int moveTime = 250, int pauseTime = 150, String style = "classic") {
+  if (style == "tight") {
+    moveTime = max(150, moveTime - 40);
+    pauseTime = max(70, pauseTime - 30);
+  } else if (style == "dramatic") {
+    moveTime += 40;
+    pauseTime += 20;
+  }
   float posRight[6]    = {90, 120, 90, 90, 90, 90};
   float posBothRight[6]= {120, 120, 90, 90, 90, 90};
   float posLeftLead[6] = {60, 120, 90, 90, 90, 90};

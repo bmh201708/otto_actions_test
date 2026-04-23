@@ -11,14 +11,36 @@ import { useRobotStatus } from "@/hooks/use-robot-status";
 import { api } from "@/lib/api";
 
 const quickActions = [
-  { key: "actionDoubleGreet", icon: "emoji_people", label: "Bow" },
-  { key: "actionFullBodyWave", icon: "accessibility_new", label: "Dance" },
-  { key: "actionWaveGoodbye", icon: "waving_hand", label: "Wave" },
-  { key: "actionTwistHip", icon: "sync", label: "Spin" }
+  {
+    key: "actionDoubleGreet",
+    icon: "emoji_people",
+    label: "Bow",
+    params: { repetitions: 2, amplitude: 12, tempo: 1100, armBias: 14 }
+  },
+  {
+    key: "actionFullBodyWave",
+    icon: "accessibility_new",
+    label: "Dance",
+    params: { cycles: 3, tempo: 1900 }
+  },
+  {
+    key: "actionWaveGoodbye",
+    icon: "waving_hand",
+    label: "Wave",
+    params: { repetitions: 3, amplitude: 18, tempo: 980, armBias: 48, style: "energetic" }
+  },
+  {
+    key: "actionTwistHip",
+    icon: "sync",
+    label: "Spin",
+    params: { cycles: 4, moveTime: 220, pauseTime: 130, style: "dramatic" }
+  }
 ];
 
 export default function ControlCenterPage() {
-  const { status, setStatus } = useRobotStatus();
+  const { status, setStatus, error } = useRobotStatus();
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [telemetryLog, setTelemetryLog] = useState<string[]>([
     "> Link established: Port 8080",
     "> Motor temp: Nominal (34°C)",
@@ -27,20 +49,49 @@ export default function ControlCenterPage() {
   ]);
 
   const statusNote = useMemo(
-    () => (status?.isBusy ? "Otto is executing a ritual." : "Otto Prime Link Established"),
-    [status?.isBusy]
+    () => {
+      if (actionError) return `Command failed: ${actionError}`;
+      if (error) return `Robot link error: ${error}`;
+      if (!status) return "Awaiting robot telemetry";
+      if (!status.isOnline) return "Otto device offline";
+      if (status.isBusy) return `Otto is executing: ${status.currentAction ?? "command"}`;
+      return `Otto ready on ${status.signalStrength} link`;
+    },
+    [actionError, error, status]
   );
 
-  async function runAction(actionKey: string) {
-    const data = await api.executeAction(actionKey);
-    setStatus(data.status);
-    setTelemetryLog((current) => [`> Executed ${actionKey}`, ...current].slice(0, 6));
+  async function runAction(actionKey: string, params?: Record<string, unknown>) {
+    setPendingAction(actionKey);
+    setActionError(null);
+
+    try {
+      const data = await api.executeAction(actionKey, params);
+      setStatus(data.status);
+      setTelemetryLog((current) => [`> Executed ${actionKey}`, ...current].slice(0, 6));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to execute action";
+      setActionError(message);
+      setTelemetryLog((current) => [`> ERROR ${message}`, ...current].slice(0, 6));
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   async function move(direction: string) {
-    const data = await api.move(direction);
-    setStatus(data.status);
-    setTelemetryLog((current) => [`> Motion vector: ${direction}`, ...current].slice(0, 6));
+    setPendingAction(`move:${direction}`);
+    setActionError(null);
+
+    try {
+      const data = await api.move(direction);
+      setStatus(data.status);
+      setTelemetryLog((current) => [`> Motion vector: ${direction}`, ...current].slice(0, 6));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to move robot";
+      setActionError(message);
+      setTelemetryLog((current) => [`> ERROR ${message}`, ...current].slice(0, 6));
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   return (
@@ -65,7 +116,14 @@ export default function ControlCenterPage() {
             </div>
             <div className="grid grid-cols-2 gap-5">
               {quickActions.map((action) => (
-                <ActionCard key={action.key} icon={action.icon} label={action.label} onClick={() => void runAction(action.key)} />
+                <ActionCard
+                  key={action.key}
+                  icon={action.icon}
+                  label={action.label}
+                  disabled={Boolean(pendingAction)}
+                  loading={pendingAction === action.key}
+                  onClick={() => void runAction(action.key, action.params)}
+                />
               ))}
             </div>
 

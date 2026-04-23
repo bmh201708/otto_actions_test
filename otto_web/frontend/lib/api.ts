@@ -11,15 +11,25 @@ import type {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {})
-    },
-    cache: "no-store"
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {})
+      },
+      cache: "no-store"
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Request timed out");
+    }
+
+    throw error;
+  }
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({ error: "Request failed" }));
@@ -39,9 +49,10 @@ export const api = {
   logout: () => request<{ ok: true }>("/api/auth/logout", { method: "POST" }),
   me: () => request<{ user: User }>("/api/auth/me"),
   getRobotStatus: () => request<{ status: RobotStatus }>("/api/robot/status"),
-  executeAction: (actionKey: string) =>
+  executeAction: (actionKey: string, params?: Record<string, unknown>) =>
     request<{ status: RobotStatus }>(`/api/robot/actions/${actionKey}/execute`, {
-      method: "POST"
+      method: "POST",
+      body: JSON.stringify(params ?? {})
     }),
   move: (direction: string) =>
     request<{ status: RobotStatus }>("/api/robot/move", {
