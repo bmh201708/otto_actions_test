@@ -44,7 +44,7 @@ async function main() {
         description: "Signature wake and greet sequence",
         steps: {
           create: [
-            { label: "Initialize", actionKey: "system_wakeup", offsetMs: 0, sortOrder: 0 },
+            { label: "Hero Pose", actionKey: "actionHeroPose", offsetMs: 0, sortOrder: 0 },
             { label: "Bow / Greet", actionKey: "actionDoubleGreet", offsetMs: 1500, sortOrder: 1 },
             { label: "Wave Goodbye", actionKey: "actionWaveGoodbye", offsetMs: 3200, sortOrder: 2 }
           ]

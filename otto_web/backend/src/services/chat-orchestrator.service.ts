@@ -16,6 +16,7 @@ import {
   executeToolCalls,
   ottoTools
 } from "./otto-tools.service";
+import { ottoDevice } from "./otto-device";
 
 export type ToolExecutionEvent =
   | {
@@ -29,12 +30,18 @@ export type ToolExecutionEvent =
       result: unknown;
     };
 
+export type ToolPlanningResult = {
+  messages: ChatCompletionMessageParam[];
+  usedSpeakTool: boolean;
+};
+
 export async function runToolPlanningLoop(
   messages: ChatCompletionMessageParam[],
   memoryContext: string,
   onEvent?: (event: ToolExecutionEvent) => void | Promise<void>
-) {
+): Promise<ToolPlanningResult> {
   const loopMessages = [...messages];
+  let usedSpeakTool = false;
 
   for (let iteration = 0; iteration < 3; iteration += 1) {
     const completion = await createToolPlanningCompletion(buildToolPlanningMessages(loopMessages, memoryContext), ottoTools);
@@ -42,7 +49,14 @@ export async function runToolPlanningLoop(
     const toolCalls = assistantMessage?.tool_calls;
 
     if (!toolCalls?.length) {
-      return loopMessages;
+      return {
+        messages: loopMessages,
+        usedSpeakTool
+      };
+    }
+
+    if (toolCalls.some((toolCall) => toolCall.function.name === "otto_speak")) {
+      usedSpeakTool = true;
     }
 
     loopMessages.push({
@@ -58,7 +72,10 @@ export async function runToolPlanningLoop(
     loopMessages.push(...toolMessages);
   }
 
-  return loopMessages;
+  return {
+    messages: loopMessages,
+    usedSpeakTool
+  };
 }
 
 export async function loadConversationTurnContext(userId: string, messages: Message[]) {
@@ -85,6 +102,7 @@ export async function runPersistedAssistantTurn(input: {
   content: string;
   conversationId?: string | null;
   assistantModel?: string | null;
+  autoSpeakShortReply?: boolean;
   onEvent?: (event: ToolExecutionEvent) => void | Promise<void>;
 }) {
   const trimmed = input.content.trim();
@@ -121,8 +139,8 @@ export async function runPersistedAssistantTurn(input: {
   });
 
   const { baseMessages, memoryContext, memoryDebug, hasMemoryDebug } = await loadConversationTurnContext(input.userId, messages);
-  const plannedMessages = await runToolPlanningLoop(baseMessages, memoryContext, input.onEvent);
-  const finalMessages = buildFinalResponseMessages(plannedMessages, memoryContext);
+  const planning = await runToolPlanningLoop(baseMessages, memoryContext, input.onEvent);
+  const finalMessages = buildFinalResponseMessages(planning.messages, memoryContext);
   const completion = await createChatCompletion(finalMessages);
   const assistantReply = completion.choices[0]?.message?.content?.trim() ?? "";
 
@@ -148,10 +166,18 @@ export async function runPersistedAssistantTurn(input: {
     });
   }
 
+  const autoSpeakTriggered =
+    input.autoSpeakShortReply !== false
+      ? await autoSpeakShortReplyIfNeeded(assistantReply, {
+          usedSpeakTool: planning.usedSpeakTool
+        })
+      : false;
+
   return {
     conversation,
     assistantMessage,
     assistantReply,
+    autoSpeakTriggered,
     memoryDebug: hasMemoryDebug ? memoryDebug : []
   };
 }
@@ -174,4 +200,54 @@ export function buildConversationMessageSnapshot(messages: Message[], excludeMes
 
 export function toPrismaJson(value: unknown): Prisma.JsonValue {
   return value as Prisma.JsonValue;
+}
+
+export async function autoSpeakShortReplyIfNeeded(
+  assistantReply: string,
+  input: {
+    usedSpeakTool: boolean;
+  }
+) {
+  if (input.usedSpeakTool) {
+    return false;
+  }
+
+  const speechText = normalizeAssistantReplyForSpeech(assistantReply);
+  if (!shouldAutoSpeakReply(speechText)) {
+    return false;
+  }
+
+  await ottoDevice.speak(speechText);
+  return true;
+}
+
+function normalizeAssistantReplyForSpeech(reply: string) {
+  return reply
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+    .replace(/[>#*_~]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function shouldAutoSpeakReply(reply: string) {
+  if (!reply) {
+    return false;
+  }
+
+  if (/https?:\/\//i.test(reply)) {
+    return false;
+  }
+
+  if (reply.includes("\n")) {
+    return false;
+  }
+
+  const sentenceCount = reply
+    .split(/[。！？!?；;]+/)
+    .map((part) => part.trim())
+    .filter(Boolean).length;
+
+  return reply.length <= 72 && sentenceCount <= 3;
 }

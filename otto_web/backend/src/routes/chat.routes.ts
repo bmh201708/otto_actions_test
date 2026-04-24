@@ -3,7 +3,11 @@ import type { ChatCompletionMessageParam } from "openai/resources/chat/completio
 
 import { prisma } from "../lib/prisma";
 import { createChatStream } from "../services/openai.service";
-import { loadConversationTurnContext, runToolPlanningLoop } from "../services/chat-orchestrator.service";
+import {
+  autoSpeakShortReplyIfNeeded,
+  loadConversationTurnContext,
+  runToolPlanningLoop
+} from "../services/chat-orchestrator.service";
 import { extractAndStoreUserMemories, shouldEmitMemoryDebug } from "../services/memory.service";
 import { buildFinalResponseMessages } from "../services/otto-tools.service";
 import { openSse, sendSse } from "../services/sse";
@@ -112,7 +116,7 @@ chatRouter.get("/stream/:conversationId", async (request, response) => {
       });
     }
 
-    const plannedMessages = await runToolPlanningLoop(baseMessages, memoryContext, async (event) => {
+    const planning = await runToolPlanningLoop(baseMessages, memoryContext, async (event) => {
       if (event.type === "tool_call") {
         sendSse(response, "chat.tool_call", {
           name: event.name,
@@ -125,7 +129,7 @@ chatRouter.get("/stream/:conversationId", async (request, response) => {
         });
       }
     });
-    const finalMessages = buildFinalResponseMessages(plannedMessages, memoryContext);
+    const finalMessages = buildFinalResponseMessages(planning.messages, memoryContext);
 
     const stream = await createChatStream(finalMessages);
     let assistantContent = "";
@@ -156,6 +160,13 @@ chatRouter.get("/stream/:conversationId", async (request, response) => {
         userInput: latestUserMessage.content,
         assistantReply: assistantContent
       });
+    }
+
+    const autoSpeakTriggered = await autoSpeakShortReplyIfNeeded(assistantContent, {
+      usedSpeakTool: planning.usedSpeakTool
+    });
+    if (autoSpeakTriggered) {
+      sendSse(response, "chat.auto_speak", { ok: true });
     }
 
     sendSse(response, "chat.done", { ok: true });

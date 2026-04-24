@@ -52,7 +52,13 @@ const sharedActionParamSchema = {
     moveTime: { type: "integer", description: "Milliseconds spent transitioning into a pose." },
     pauseTime: { type: "integer", description: "Milliseconds spent holding a pose." },
     duration: { type: "integer", description: "Duration in milliseconds." },
-    holdTime: { type: "integer", description: "How long to hold a pose." }
+    holdTime: { type: "integer", description: "How long to hold a pose." },
+    depth: { type: "integer", description: "Depth of a bowing motion in degrees." },
+    armSpread: { type: "integer", description: "How wide the arms open from neutral." },
+    sway: { type: "integer", description: "Amount of side sway during a gesture." },
+    lift: { type: "integer", description: "How high a leg lifts during marching." },
+    armSwing: { type: "integer", description: "Arm swing size for marching motions." },
+    lean: { type: "integer", description: "How far Otto leans to either side." }
   }
 } as const;
 

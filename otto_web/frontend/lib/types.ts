@@ -41,6 +41,22 @@ export type SequenceStep = {
   params?: Record<string, unknown> | null;
 };
 
+export type ActionParamSpec = {
+  type: "integer" | "number" | "boolean" | "enum";
+  description: string;
+  default: string | number | boolean;
+  minimum?: number;
+  maximum?: number;
+  enumValues?: string[];
+};
+
+export type ActionSpec = {
+  actionKey: string;
+  label: string;
+  description: string;
+  params: Record<string, ActionParamSpec>;
+};
+
 export type Sequence = {
   id: string;
   name: string;
@@ -48,6 +64,17 @@ export type Sequence = {
   steps: SequenceStep[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type SequenceMutationInput = {
+  name?: string;
+  description?: string | null;
+  steps?: Array<{
+    label: string;
+    actionKey: string;
+    offsetMs: number;
+    params?: Record<string, unknown> | null;
+  }>;
 };
 
 export type Conversation = {

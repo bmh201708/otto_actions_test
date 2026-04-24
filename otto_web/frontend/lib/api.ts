@@ -1,4 +1,5 @@
 import type {
+  ActionSpec,
   ConfigSnapshot,
   Conversation,
   DeviceVoiceStatus,
@@ -6,6 +7,7 @@ import type {
   OracleReading,
   RobotStatus,
   Sequence,
+  SequenceMutationInput,
   User,
   VoiceSession
 } from "@/lib/types";
@@ -53,6 +55,7 @@ export const api = {
   logout: () => request<{ ok: true }>("/api/auth/logout", { method: "POST" }),
   me: () => request<{ user: User }>("/api/auth/me"),
   getRobotStatus: () => request<{ status: RobotStatus }>("/api/robot/status"),
+  getRobotActions: () => request<{ actions: ActionSpec[] }>("/api/robot/actions"),
   executeAction: (actionKey: string, params?: Record<string, unknown>) =>
     request<{ status: RobotStatus }>(`/api/robot/actions/${actionKey}/execute`, {
       method: "POST",
@@ -90,12 +93,12 @@ export const api = {
   getOracleHistory: () => request<{ readings: OracleReading[] }>("/api/oracle/history"),
   getSequences: () => request<{ sequences: Sequence[] }>("/api/action-lab/sequences"),
   getSequence: (id: string) => request<{ sequence: Sequence }>(`/api/action-lab/sequences/${id}`),
-  saveSequence: (payload: Partial<Sequence>) =>
+  saveSequence: (payload: SequenceMutationInput) =>
     request<{ sequence: Sequence }>("/api/action-lab/sequences", {
       method: "POST",
       body: JSON.stringify(payload)
     }),
-  updateSequence: (id: string, payload: Partial<Sequence>) =>
+  updateSequence: (id: string, payload: SequenceMutationInput) =>
     request<{ sequence: Sequence }>(`/api/action-lab/sequences/${id}`, {
       method: "PUT",
       body: JSON.stringify(payload)

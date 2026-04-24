@@ -286,6 +286,170 @@ export const ACTION_SPECS: ActionSpec[] = [
     buildDynamicDefaults: () => ({
       holdTime: randomInt(2500, 5500)
     })
+  },
+  {
+    actionKey: "actionBow",
+    label: "Bow",
+    description: "A respectful bow with adjustable depth and hold time.",
+    params: {
+      cycles: {
+        type: "integer",
+        description: "How many bows to perform.",
+        default: 2,
+        minimum: 1,
+        maximum: 5
+      },
+      depth: {
+        type: "integer",
+        description: "How deep Otto bows in degrees.",
+        default: 22,
+        minimum: 10,
+        maximum: 32
+      },
+      moveTime: {
+        type: "integer",
+        description: "Milliseconds to move into and out of the bow.",
+        default: 520,
+        minimum: 260,
+        maximum: 900
+      },
+      holdTime: {
+        type: "integer",
+        description: "How long to hold each bow.",
+        default: 260,
+        minimum: 120,
+        maximum: 1000
+      }
+    },
+    buildDynamicDefaults: () => ({
+      cycles: randomInt(1, 3),
+      depth: randomInt(16, 28),
+      moveTime: randomInt(360, 720),
+      holdTime: randomInt(160, 420)
+    })
+  },
+  {
+    actionKey: "actionOpenArms",
+    label: "Open Arms",
+    description: "A welcoming open-arm gesture with gentle body sway.",
+    params: {
+      cycles: {
+        type: "integer",
+        description: "Number of sway cycles to perform.",
+        default: 3,
+        minimum: 1,
+        maximum: 6
+      },
+      armSpread: {
+        type: "integer",
+        description: "How wide the arms open from neutral.",
+        default: 42,
+        minimum: 20,
+        maximum: 60
+      },
+      tempo: {
+        type: "integer",
+        description: "Milliseconds for one sway cycle.",
+        default: 1200,
+        minimum: 700,
+        maximum: 1800
+      },
+      sway: {
+        type: "integer",
+        description: "Amount of torso sway during the welcome.",
+        default: 8,
+        minimum: 0,
+        maximum: 16
+      }
+    },
+    buildDynamicDefaults: () => ({
+      cycles: randomInt(2, 4),
+      armSpread: randomInt(32, 54),
+      tempo: randomInt(900, 1500),
+      sway: randomInt(4, 12)
+    })
+  },
+  {
+    actionKey: "actionMarch",
+    label: "March",
+    description: "A playful in-place march with alternating arm swings.",
+    params: {
+      steps: {
+        type: "integer",
+        description: "Number of marching steps.",
+        default: 6,
+        minimum: 2,
+        maximum: 12
+      },
+      lift: {
+        type: "integer",
+        description: "How high each leg lifts in degrees.",
+        default: 18,
+        minimum: 8,
+        maximum: 26
+      },
+      tempo: {
+        type: "integer",
+        description: "Milliseconds for one left-right marching cycle.",
+        default: 700,
+        minimum: 420,
+        maximum: 1200
+      },
+      armSwing: {
+        type: "integer",
+        description: "How much the arms swing during the march.",
+        default: 18,
+        minimum: 0,
+        maximum: 30
+      }
+    },
+    buildDynamicDefaults: () => ({
+      steps: randomInt(4, 8),
+      lift: randomInt(12, 22),
+      tempo: randomInt(520, 960),
+      armSwing: randomInt(8, 24)
+    })
+  },
+  {
+    actionKey: "actionLeanGroove",
+    label: "Lean Groove",
+    description: "A side-to-side groove with leaning hips and offset arms.",
+    params: {
+      cycles: {
+        type: "integer",
+        description: "How many left-right groove cycles to perform.",
+        default: 4,
+        minimum: 2,
+        maximum: 8
+      },
+      lean: {
+        type: "integer",
+        description: "How far Otto leans to each side.",
+        default: 18,
+        minimum: 8,
+        maximum: 28
+      },
+      tempo: {
+        type: "integer",
+        description: "Milliseconds for one groove cycle.",
+        default: 850,
+        minimum: 500,
+        maximum: 1400
+      },
+      armBias: {
+        type: "integer",
+        description: "Arm offset used to accent the groove.",
+        default: 24,
+        minimum: 8,
+        maximum: 36
+      }
+    },
+    buildDynamicDefaults: () => ({
+      cycles: randomInt(3, 6),
+      lean: randomInt(12, 24),
+      tempo: randomInt(620, 1100),
+      armBias: randomInt(14, 30)
+    })
   }
 ];
 
